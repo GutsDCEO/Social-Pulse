@@ -2,6 +2,7 @@ package com.guts.socialpulse.dto;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.Builder.Default;
 import java.util.Map;
 import java.util.UUID;
 
@@ -9,6 +10,7 @@ import java.util.UUID;
 @Builder
 public class AuthResponse {
     private String token;
+    @Builder.Default
     private String type = "Bearer";
     private UUID userId;
     private String username;

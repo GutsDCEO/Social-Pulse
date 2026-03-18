@@ -24,6 +24,11 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+app:
+  security:
+    initial-admin-password: ${INITIAL_ADMIN_PASSWORD:admin123}
+    initial-cm-password: ${INITIAL_CM_PASSWORD:cm123}
+
 jwt:
   secret: ${JWT_SECRET:CHANGE_THIS_TO_A_SECURE_RANDOM_STRING_FOR_DEV_ONLY}
   access-expiration: ${JWT_ACCESS_EXPIRATION:900000} # 15 mins

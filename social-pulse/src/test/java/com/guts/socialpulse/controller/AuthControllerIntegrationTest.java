@@ -9,6 +9,7 @@ import com.guts.socialpulse.repository.CabinetRepository;
 import com.guts.socialpulse.repository.UserRepository;
 import com.guts.socialpulse.security.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,12 @@ public class AuthControllerIntegrationTest {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private ObjectMapper objectMapper;
 
+    @Value("${app.security.initial-admin-password:admin123}")
+    private String adminPassword;
+
+    @Value("${app.security.initial-cm-password:cm123}")
+    private String cmPassword;
+
     @BeforeEach
     void setup() {
         userRepository.deleteAll();
@@ -50,7 +57,7 @@ public class AuthControllerIntegrationTest {
                 .fullName("Test User")
                 .username("testuser")
                 .email("test@example.com")
-                .password(passwordEncoder.encode("password123"))
+                .password(passwordEncoder.encode(cmPassword))
                 .isActive(true)
                 .build();
         user.getCabinetRoles().put(cabinet, Role.CM);
@@ -61,7 +68,7 @@ public class AuthControllerIntegrationTest {
     void loginShouldReturnTokenAndUserDetails() throws Exception {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setUsername("testuser");
-        loginRequest.setPassword("password123");
+        loginRequest.setPassword(cmPassword);
 
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

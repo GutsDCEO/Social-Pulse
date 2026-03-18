@@ -1,6 +1,5 @@
 package com.guts.socialpulse.service;
 
-import com.guts.socialpulse.domain.entity.Cabinet;
 import com.guts.socialpulse.domain.entity.User;
 import com.guts.socialpulse.dto.AuthResponse;
 import com.guts.socialpulse.dto.LoginRequest;
@@ -27,7 +26,7 @@ public class AuthService {
     private final JwtUtils jwtUtils;
 
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         User user = userRepository.findByUsername(request.getUsername())
