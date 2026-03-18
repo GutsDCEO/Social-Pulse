@@ -1,0 +1,111 @@
+# 🌐 SocialPulse — API Consumption Strategy (Frontend)
+
+To keep your frontend clean, secure, and scalable, we should use a **centralized API handling strategy** using Axios.
+
+---
+
+## 🏗️ Architecture: The 4-Layer Approach
+
+| Layer | Responsibility | Example File |
+|---|---|---|
+| **1. API Client** | Base configuration + Interceptors | `src/api/apiClient.ts` |
+| **2. Services** | Specific endpoint logic (GET/POST) | `src/services/authService.ts` |
+| **3. Hooks** | State management & Caching | `TanStack Query` (React Query) |
+| **4. UI Components** | Displaying data & handling events | `LoginPage.tsx` |
+
+---
+
+## 🛠️ Implementation Guide
+
+### 1. The Central API Client (`apiClient.ts`)
+Create a single instance of Axios. **Interceptors** are your best friend here — they automatically attach the JWT token to every request.
+
+```typescript
+import axios from 'axios';
+
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+// 🔒 Request Interceptor: Attach JWT
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token'); // or your secure storage
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 🛡️ Response Interceptor: Handle 401 (Token expired)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login'; // Force redirect
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
+```
+
+---
+
+### 2. Feature-Specific Services (`authService.ts`)
+Don't call Axios inside your components. Wrap them in services.
+
+```typescript
+import apiClient from '../api/apiClient';
+import { LoginRequest, AuthResponse } from '../types/auth';
+
+export const authService = {
+  login: async (credentials: LoginRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
+    return response.data;
+  },
+  
+  register: async (userData: any) => {
+    return await apiClient.post('/auth/register', userData);
+  }
+};
+```
+
+---
+
+### 3. Handling API Calls in Components
+For small projects, you can use `useEffect`, but for **SocialPulse**, I highly recommend **TanStack Query (React Query)**. It handles loading spinners, error states, and caching automatically.
+
+**Example with TanStack Query**:
+```tsx
+const { data, isLoading, error } = useQuery({
+  queryKey: ['cabinets'],
+  queryFn: cabinetService.getAll
+});
+
+if (isLoading) return <Spinner />;
+if (error) return <ErrorMessage message="Failed to load cabinets" />;
+
+return data.map(cabinet => <CabinetCard key={cabinet.id} data={cabinet} />);
+```
+
+---
+
+## ⚖️ Pro-Tip: Environment Variables
+Never hardcode `http://localhost:8080`. Use a `.env` file:
+
+**`.env.local`**:
+```text
+VITE_API_URL=http://localhost:8080/api/v1
+```
+
+---
+
+## 🚀 Why this is best Practice?
+1. **DRY (Don't Repeat Yourself)**: You only write the Authorization header logic **once**.
+2. **Centralized Security**: If you decide to move tokens to cookies or change the API version, you only change **one file** (`apiClient.ts`).
+3. **Decoupled**: Components don't care "how" the data is fetched (Axios, Fetch, etc.), they only care about the UI.
+
+In Week 1 (Task 1.8), your collaborator should set up this `apiClient.ts` first!

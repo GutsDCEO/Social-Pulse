@@ -1,0 +1,345 @@
+# 🏗️ SocialPulse — Implementation Source
+
+> This file is structured for the **Project Maker Kanban Automation** system.
+> Stack: Java 21 · Spring Boot 3.x · PostgreSQL · React 18 (TS, Vite, Tailwind) · Spring Security + JWT
+> Strategy: Foundation → MVP B (CM) → MVP A (Admin) + MVP C (Lawyer) → Integration → Testing → Polish
+
+## 📅 Week 1: Foundation & Base Infrastructure [Phase 1]
+*Goal: Mandatory project scaffolding — backend, frontend, database, auth core. Nothing works without this.*
+
+- [ ] **1.1 Spring Boot 3.x Project Init [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Generate Spring Boot 3.x project with Spring Initializr (Web, Security, JPA, Validation, OAuth2 Client).
+    - [ ] Configure Maven/Gradle multi-module structure (api, domain, infrastructure).
+    - [ ] Setup `.env.example`, `application.yml` profiles (dev, test, prod).
+    - [ ] Configure CORS policy for React frontend origin.
+- [ ] **1.2 PostgreSQL Docker Setup [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Write `docker-compose.yml` with PostgreSQL 16 service.
+    - [ ] Add pgAdmin container for visual DB management.
+    - [ ] Create init SQL script for database creation.
+    - [ ] Verify `docker-compose up` starts cleanly on Windows.
+- [ ] **1.3 Master ERD — Database Schema [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Create `User` entity (uuid, full_name, username, email, password_hash, mfa_enabled, is_active, last_login).
+    - [ ] Create `Cabinet` entity (uuid, name, barreau, email, phone, address, city, postal_code, website, pack, status, payment_status, specializations, risk_score).
+    - [ ] Create `UserCabinet` join table (user_id, cabinet_id, role ENUM: ADMIN|CM|AVOCAT).
+    - [ ] Create `Post` entity (uuid, cabinet_id, created_by, content, status ENUM, target_networks, scheduled_at, published_at, ai_source).
+    - [ ] Create `Media` entity (uuid, cabinet_id, file_name, s3_key, content_type, size_bytes, legal_theme, is_validated).
+    - [ ] Create `PostMedia` join table.
+    - [ ] Create `AuditLog` entity (uuid, post_id, actor_id, action ENUM, comment, performed_at — immutable).
+    - [ ] Run Flyway/Liquibase migration to generate all tables.
+- [ ] **1.4 JWT Authentication — Email/Password [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `JwtTokenProvider` (create, validate, parse claims).
+    - [ ] Implement `JwtAuthFilter` (extract token from Authorization header).
+    - [ ] Implement `AuthController` with `POST /api/v1/auth/login` endpoint.
+    - [ ] JWT payload: sub, email, roles (cabinet→role map), activeCabinetId, isSimulating, iat, exp.
+    - [ ] BCrypt password hashing (cost=12).
+    - [ ] Return 401 on invalid credentials, 200 + token on success.
+- [ ] **1.5 TenantContextFilter — Multi-Tenancy Core [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `TenantContextFilter` reading `X-Cabinet-Context` header.
+    - [ ] Assert `cabinetRoles.containsKey(headerCabinetId)` — return 403 if unauthorized.
+    - [ ] Set `TenantContext.set(cabinetId, role)` via ThreadLocal.
+    - [ ] Enable Hibernate `@Filter("cabinetFilter")` on all tenant-scoped entities.
+    - [ ] Add `finally { TenantContext.clear() }` to prevent context leak.
+- [ ] **1.6 User Entity + Repository [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `UserRepository` with `findByEmail()`, `findByUsername()`.
+    - [ ] Implement `UserService` with create, findById, findAll, deactivate.
+    - [ ] Add unique constraints on email and username.
+    - [ ] Implement `UserDTO` and `CreateUserRequest` DTOs with Bean Validation.
+- [ ] **1.7 Cabinet Entity + Repository [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `CabinetRepository` with `findAllByStatus()`.
+    - [ ] Implement `CabinetService` with CRUD operations.
+    - [ ] Add `@Filter` annotation for tenant-scoped queries.
+    - [ ] Implement `CabinetDTO` and `CreateCabinetRequest` DTOs.
+- [ ] **1.8 React 18 Project Init (Vite + TypeScript + Tailwind) [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Initialize React project with `create-vite` (TypeScript template).
+    - [ ] Install Tailwind CSS and configure `tailwind.config.ts`.
+    - [ ] Setup project structure: `components/`, `pages/`, `hooks/`, `services/`, `types/`.
+    - [ ] Install Axios and create `apiClient.ts` with JWT interceptor.
+    - [ ] Install React Router v6 and configure base routes.
+- [ ] **1.9 AuthGuard + JWT Context Provider [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `AuthContext` (React Context) with login/logout/currentUser.
+    - [ ] Implement `AuthGuard` component (redirect to /login if no token).
+    - [ ] Implement `LoginPage` with email/password form.
+    - [ ] Display "Contactez-nous" instead of "Sign up" (no self-registration).
+    - [ ] Store JWT in `httpOnly` cookie or secure localStorage.
+- [ ] **1.10 Dynamic Sidebar Component [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `useSidebarConfig(role)` hook returning role-specific menu items.
+    - [ ] Admin sidebar: OPÉRATIONS, BUSINESS, COORDINATION, CONFORMITÉ, PARAMÈTRES.
+    - [ ] CM sidebar: condensed view with cabinet-scoped items.
+    - [ ] Lawyer sidebar: CONTENU, CANAUX, ANALYSE, SUPPORT.
+    - [ ] Implement `AppLayout` with Sidebar + TopBar + Main content area.
+- [ ] **1.0 Week 1 Demo & Retro [💻 PC]** — 🔵 MVP
+    - [ ] Demo: User can log in, receive JWT, and see a role-based sidebar.
+    - [ ] Demo: TenantContextFilter blocks unauthorized cabinet access (403).
+    - [ ] Document retrospective notes.
+
+## 📅 Week 2: MVP B — CM Interface (The Producer) [Phase 1]
+*Goal: Community Manager can switch cabinets, create posts, and submit them for review.*
+
+- [ ] **2.1 Cabinet Switching API [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `POST /api/v1/auth/switch-cabinet` endpoint.
+    - [ ] Validate user has access to target cabinet via `UserCabinet`.
+    - [ ] Re-issue JWT with updated `activeCabinetId`.
+    - [ ] Return 403 if user is not a member of the target cabinet.
+- [ ] **2.2 "Mes Cabinets" Page (CM View) [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Build `MesCabinetsPage` with a filterable card grid.
+    - [ ] Display: Cabinet name, Barreau, Status badge (ACTIF/INACTIF/ATTENTION), Address, Contact.
+    - [ ] Implement "Sélectionné" button to switch active cabinet.
+    - [ ] Implement filters: Barreau (dropdown), Statut (dropdown), Spécialisation (dropdown).
+    - [ ] Add ⚙️ Settings gear navigating to read-only `Paramètres du cabinet`.
+- [ ] **2.3 Post Entity + PostStatus Enum [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `PostRepository` with `findAllByCabinetId(cabinetId, pageable)`.
+    - [ ] Define `PostStatus` enum: DRAFT, PENDING_CM, PENDING_LAWYER, APPROVED, SCHEDULED, PUBLISHED, REJECTED, ERROR.
+    - [ ] Apply `@Filter("cabinetFilter")` for tenant isolation.
+    - [ ] Implement `PostDTO` and `CreatePostRequest` DTOs.
+- [ ] **2.4 POST /api/v1/posts — Create Draft with Media [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement `PostService.createDraft()` with content, targetNetworks, scheduledAt, mediaIds.
+    - [ ] Validate content length (max 3000 characters).
+    - [ ] Auto-set status to `DRAFT`.
+    - [ ] Link media via `PostMedia` join table.
+    - [ ] Return created PostDTO with generated UUID.
+- [ ] **2.5 Post Editor Page — Channel Selector [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Build `ChannelSelector` component with toggle grid.
+    - [ ] Channels: LinkedIn, Instagram, Facebook, X(Twitter), Google Business.
+    - [ ] Support multi-select (multiple networks per post).
+    - [ ] Show platform warning: "Les options barrées ne sont pas supportées par [network]".
+- [ ] **2.6 Post Editor Page — Rich Text Editor [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Integrate a rich text editor (TipTap or Slate.js).
+    - [ ] Support: Bold, Italic, Strikethrough, List, Emoji.
+    - [ ] Implement character counter: `0 / 3000`.
+    - [ ] Add "Assistance rédactionnelle" button placeholder (AI — Phase 2).
+- [ ] **2.7 Post Editor Page — Media Upload [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Build `MediaUploader` component with drag & drop zone.
+    - [ ] Validate file size (max 5 Mo).
+    - [ ] Implement `POST /api/v1/media/upload` endpoint (S3 or local storage for dev).
+    - [ ] Add "Générer avec l'IA" button placeholder (Phase 2).
+- [ ] **2.8 Post Editor Page — Scheduling Panel [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Build `SchedulingPanel` with date picker + time picker.
+    - [ ] Status dropdown: `Brouillon` (DRAFT) by default.
+    - [ ] "Sauvegarder" → save as DRAFT. "Programmer" → set SCHEDULED.
+    - [ ] Validate `scheduledAt` is in the future.
+- [ ] **2.9 CM Review Gate — "À valider" Page [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Build `AValiderPage` displaying posts with status `PENDING_CM`.
+    - [ ] Show banner: "Revue CM avant envoi à l'avocat...".
+    - [ ] Post card actions: Approuver et envoyer, Modifier, Rejeter, Aperçu.
+    - [ ] Implement `PUT /api/v1/posts/{id}/submit` (PENDING_CM → PENDING_LAWYER).
+    - [ ] Implement `PATCH /api/v1/posts/{id}/reject` (PENDING_CM → REJECTED).
+- [ ] **2.10 Post State Transitions — CM Flow [💻 PC]** — 🔵 MVP [P0]
+    - [ ] Implement state machine guard: only valid transitions allowed.
+    - [ ] DRAFT → PENDING_LAWYER (CM direct submit, no AI).
+    - [ ] PENDING_CM → PENDING_LAWYER (CM approves AI content).
+    - [ ] PENDING_CM → REJECTED (CM rejects bad AI content).
+    - [ ] Log every transition in `AuditLog`.
+- [ ] **2.0 Week 2 Demo & Retro [💻 PC]** — 🔵 MVP
+    - [ ] Demo: CM switches cabinet, creates a post with media, submits for Lawyer review.
+    - [ ] Demo: Post appears in "À valider" with correct state transitions.
+    - [ ] Update Kanban board status.
+
+## 📅 Week 3: MVP A (Admin) + MVP C (Lawyer) [Phase 2]
+*Goal: Admin can manage users/cabinets. Lawyer can validate/reject posts.*
+
+- [ ] **3.1 Admin Dashboard — Vue d'ensemble [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `AdminDashboardPage` with KPI cards.
+    - [ ] Display: Total users, active cabinets, posts this week, pending validations.
+    - [ ] Implement `GET /api/v1/admin/stats` endpoint.
+- [ ] **3.2 User Management — Full CRUD with Roles [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `UtilisateursPage` with searchable user table.
+    - [ ] Admin-only modal: Create user (fullName, username, password, role per cabinet).
+    - [ ] Validate: username `[a-z0-9_]+`, password min 8 chars.
+    - [ ] Implement `PUT /api/v1/users/{id}` and `DELETE /api/v1/users/{id}`.
+    - [ ] Role assignment per cabinet via `UserCabinet` management.
+- [ ] **3.3 Cabinet Management — Full CRUD [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `CabinetsPage` with filterable cabinet table.
+    - [ ] Create/Edit modal: name, barreau, email, phone, address, city, postal_code, website, pack, status.
+    - [ ] Implement pack selection: ESSENTIEL | AVANCÉ | EXPERT.
+    - [ ] Implement status management: ACTIF | INACTIF | EN_TEST.
+- [ ] **3.4 Organization Seeding Script [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Write `data.sql` or Flyway migration for initial seed data.
+    - [ ] Create SocialPulse organization (root tenant).
+    - [ ] Create Super Admin user with BCrypt-hashed password.
+    - [ ] Create `[DEMO] Cabinet Stagiaire & Associés` with ESSENTIEL pack.
+    - [ ] Assign Admin to all seeded cabinets.
+- [ ] **3.5 Audit Log — Append-Only Insert [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement `AuditLogRepository` (insert-only, no update/delete).
+    - [ ] Implement `AuditLogService.log(postId, actorId, action, comment)`.
+    - [ ] Actions: CREATED, SUBMITTED, APPROVED, REJECTED, EDIT_REQUESTED, DECLINED, PUBLISHED, ERROR.
+    - [ ] Build Admin `Journal d'activité` page with paginated log viewer.
+- [ ] **3.6 Lawyer Review Gate — "Communications en attente" [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `CommunicationsPage` showing posts with status `PENDING_LAWYER`.
+    - [ ] Header: "X prises de parole à valider avant diffusion".
+    - [ ] Legal banner: "Aucune publication sans validation explicite de l'avocat..."
+    - [ ] Filters: Tout | Urgent | Aujourd'hui | Cette semaine | Expirés.
+    - [ ] Tabs: Tout | Réseaux sociaux | Blog.
+- [ ] **3.7 Lawyer Actions — Valider / Refuser / Demander modification [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement `PATCH /api/v1/posts/{id}/approve` (PENDING_LAWYER → APPROVED).
+    - [ ] Implement `PATCH /api/v1/posts/{id}/reject` (PENDING_LAWYER → REJECTED).
+    - [ ] Implement `POST /api/v1/posts/{id}/request-edit` (PENDING_LAWYER → PENDING_CM + comment).
+    - [ ] Implement `POST /api/v1/posts/{id}/decline` (PENDING_LAWYER → PENDING_CM + reason).
+    - [ ] Build `PostValidationCard` with 5 action buttons + color codes.
+    - [ ] Build `FeedbackModal` for decline/request-edit reasons.
+- [ ] **3.8 Lawyer Sidebar + Calendar View [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement `CalendrierPage` with FullCalendar.js integration.
+    - [ ] Display scheduled posts as calendar events.
+    - [ ] Sidebar: "Opportunités éditoriales" (legal news feed).
+    - [ ] Example entries: "Audience CNIL", "Arrêt Cour de cassation".
+- [ ] **3.9 PreviewPane — Network-Specific Frames [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `PreviewPane` modal component.
+    - [ ] Render post content in LinkedIn-style frame.
+    - [ ] Render post content in Facebook-style frame.
+    - [ ] Render post content in Instagram-style frame.
+    - [ ] Client-side only — no state change on preview.
+- [ ] **3.10 Audit History Dropdown [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `AuditHistoryDropdown` component on PostValidationCard.
+    - [ ] Fetch `GET /api/v1/posts/{id}/audit` endpoint.
+    - [ ] Display chronological list: action, actor name, timestamp, comment.
+- [ ] **3.0 Week 3 Demo & Retro [💻 PC]** — 🔵 MVP
+    - [ ] Demo: Admin creates a user and a cabinet, assigns CM role.
+    - [ ] Demo: Lawyer approves a post, full audit trail visible.
+    - [ ] Document retrospective notes.
+
+## 📅 Week 4: Integration, Security & State Machine [Phase 2]
+*Goal: Full post lifecycle, Google OAuth2, simulation mode, GDPR compliance.*
+
+- [ ] **4.1 Full Post Lifecycle State Machine [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement `PostStateMachine` service enforcing all valid transitions.
+    - [ ] Guard: APPROVED → SCHEDULED (only if scheduledAt is set).
+    - [ ] Guard: APPROVED → PUBLISHED (immediate publish if no scheduledAt).
+    - [ ] Implement `SCHEDULED → PUBLISHED` via Spring `@Scheduled` cron.
+    - [ ] Implement `SCHEDULED → ERROR` on Social API failure.
+    - [ ] Implement retry logic: ERROR → SCHEDULED (max 3 attempts).
+- [ ] **4.2 Google OAuth2 Login Flow [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Configure Spring OAuth2 Client with Google provider.
+    - [ ] Implement `OAuth2SuccessHandler` to create/link User and issue JWT.
+    - [ ] Handle first-time login: auto-create user, assign to default cabinet.
+    - [ ] Update `LoginPage` with "Se connecter avec Google" button.
+- [ ] **4.3 Simulation Mode — @SimulationReadOnly [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Create custom `@SimulationReadOnly` annotation.
+    - [ ] `TenantContextFilter` checks `jwt.isSimulating` flag.
+    - [ ] Block all PATCH/PUT/POST requests if `isSimulating == true` → 403.
+    - [ ] Allow all GET requests in simulation mode.
+    - [ ] Build `SimulationBadge` component in TopBar ("Vue : Avocat" toggle).
+- [ ] **4.4 GDPR Right to Erasure [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement `DELETE /api/v1/users/{id}` with cascading data deletion.
+    - [ ] Delete: UserCabinet entries, Posts (authored), Media (uploaded).
+    - [ ] Preserve: AuditLog entries (anonymize actor_id, never delete).
+    - [ ] Return confirmation with summary of deleted records.
+- [ ] **4.5 Rate Limiting — Login Protection [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Implement rate limiter: 5 failed login attempts → 15-min lockout.
+    - [ ] Use Bucket4j or Spring `@RateLimiter`.
+    - [ ] Log all failed attempts with IP address and timestamp.
+    - [ ] Return 429 Too Many Requests with `Retry-After` header.
+- [ ] **4.6 Support Hub — "Mon CM" (Lawyer View) [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `MonCMPage` with CM profile card (name, specialty, status).
+    - [ ] Add "Base de réponses" section with 15 FAQ articles.
+    - [ ] Add "Messagerie" placeholder (live chat — Phase 2).
+    - [ ] Add "Prendre rendez-vous" placeholder (calendar booking — Phase 2).
+- [ ] **4.7 CabinetContextSwitcher Component [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `CabinetContextSwitcher` in TopBar.
+    - [ ] Display current active cabinet name + status badge.
+    - [ ] Dropdown to switch between user's cabinets.
+    - [ ] On switch: call `POST /api/v1/auth/switch-cabinet`, refresh JWT.
+- [ ] **4.8 NotificationBell Component [💻 PC]** — 🔵 MVP [P1]
+    - [ ] Build `NotificationBell` icon in TopBar.
+    - [ ] Display unread notification count badge.
+    - [ ] Dropdown: list of recent notifications (new post pending, approval, rejection).
+    - [ ] Mark as read on click.
+- [ ] **4.0 Week 4 Demo & Retro [💻 PC]** — 🔵 MVP
+    - [ ] Demo: Full post lifecycle from DRAFT to PUBLISHED.
+    - [ ] Demo: Google OAuth2 login works alongside email/password.
+    - [ ] Demo: Simulation mode blocks writes (403 on PATCH).
+    - [ ] Document retrospective notes.
+
+## 📅 Week 5: Testing & Security Audit [Phase 3]
+*Goal: Comprehensive test suite, OWASP compliance, CI/CD readiness.*
+
+- [ ] **5.1 TenantContextFilter Unit Tests (FIRST) [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: Returns 403 when CM requests unauthorized cabinet.
+    - [ ] Test: Sets TenantContext when cabinet is valid.
+    - [ ] Test: Blocks write actions when Simulation mode is active.
+    - [ ] Use MockMvc, no real DB calls.
+- [ ] **5.2 Post State Machine Tests [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: All valid state transitions succeed.
+    - [ ] Test: Invalid transitions throw `IllegalStateTransitionException`.
+    - [ ] Test: AuditLog entry created for every transition.
+    - [ ] Test: Retry logic respects max 3 attempts.
+- [ ] **5.3 MockMvc Integration Tests — API Layer [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: `POST /api/v1/auth/login` returns JWT on valid credentials.
+    - [ ] Test: `POST /api/v1/posts` creates draft with correct cabinet_id.
+    - [ ] Test: `PATCH /api/v1/posts/{id}/approve` transitions to APPROVED.
+    - [ ] Test: Tenant isolation — User A cannot see User B's posts.
+- [ ] **5.4 OWASP A01 — Access Control Enforcement [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Verify every endpoint enforces role-based access control.
+    - [ ] Verify CM cannot access Admin-only endpoints.
+    - [ ] Verify Lawyer cannot modify posts directly (only approve/reject).
+    - [ ] Add `@PreAuthorize` annotations on all controller methods.
+- [ ] **5.5 OWASP A03 — Input Validation & Parameterized Queries [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Verify all user inputs are validated with Bean Validation annotations.
+    - [ ] Verify no raw SQL queries — all JPA/Hibernate parameterized.
+    - [ ] Add XSS sanitization on post content.
+    - [ ] Verify file upload validates content-type and size.
+- [ ] **5.6 ArchUnit CI Enforcement [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Write ArchUnit test: No `@Repository` calls directly from `@Controller`.
+    - [ ] Write ArchUnit test: All entities in `domain` package.
+    - [ ] Write ArchUnit test: All DTOs in `api.dto` package.
+    - [ ] Integrate into CI pipeline (GitHub Actions).
+- [ ] **5.7 Cypress E2E — Login Flow [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: Successful login redirects to dashboard.
+    - [ ] Test: Invalid credentials shows error message.
+    - [ ] Test: 5 failed attempts triggers rate limiting.
+    - [ ] Use `cy.intercept()` for API mocking where appropriate.
+- [ ] **5.8 Cypress E2E — Post Creation Flow [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: CM creates a post with content, channels, and scheduling.
+    - [ ] Test: Post appears in cabinet's post list.
+    - [ ] Test: Draft can be edited and resubmitted.
+- [ ] **5.9 Cypress E2E — Lawyer Validation Flow [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Test: Lawyer sees pending posts on "Communications en attente".
+    - [ ] Test: Approve button transitions state and creates audit entry.
+    - [ ] Test: "Demander modification" sends post back to CM with comment.
+- [ ] **5.0 Week 5 Demo & Retro [💻 PC]** — ⚪ Post-MVP
+    - [ ] Demo: Full test suite passes in CI.
+    - [ ] Demo: OWASP compliance report.
+    - [ ] Document retrospective notes.
+
+## 📅 Week 6: Social Publishing, Polish & Launch [Phase 4]
+*Goal: Strategy Pattern for social APIs, performance tuning, documentation, deployment.*
+
+- [ ] **6.1 SocialPublisher Interface + Strategy Pattern [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Define `SocialPublisher` interface: publish(), preview(), supports(), getCharLimit().
+    - [ ] Implement `LinkedInPublisher` (char limit: 3000).
+    - [ ] Implement `FacebookPublisher` (char limit: 63206).
+    - [ ] Implement `PublishOrchestrator` with Spring auto-injected publisher list.
+    - [ ] OCP: Adding Instagram = new class, zero changes to orchestrator.
+- [ ] **6.2 Post Scheduling Backend — @Scheduled Cron [💻 PC]** — ⚪ Post-MVP [P2]
+    - [ ] Implement `PostSchedulerService` with `@Scheduled(fixedRate = 60000)`.
+    - [ ] Query: `SELECT * FROM posts WHERE status = 'SCHEDULED' AND scheduled_at <= NOW()`.
+    - [ ] For each: call `PublishOrchestrator.publishToAll()`.
+    - [ ] On success: SCHEDULED → PUBLISHED. On failure: SCHEDULED → ERROR.
+- [ ] **6.3 Error Retry Logic — Exponential Backoff [💻 PC]** — ⚪ Post-MVP [P3]
+    - [ ] Implement retry counter on Post entity (`retry_count`, `next_retry_at`).
+    - [ ] Retry schedule: 1min, 5min, 15min (max 3 attempts).
+    - [ ] After 3 failures: mark as ERROR permanently, notify admin.
+    - [ ] Log each retry attempt in AuditLog.
+- [ ] **6.4 Performance Tuning & Caching [💻 PC]** — ⚪ Post-MVP [P3]
+    - [ ] Add Spring Cache on frequently read endpoints (cabinet list, user profile).
+    - [ ] Add database indexes on `posts.cabinet_id`, `posts.status`, `posts.scheduled_at`.
+    - [ ] Profile N+1 queries with Hibernate statistics.
+    - [ ] Optimize `findAllByCabinetId` with `@EntityGraph`.
+- [ ] **6.5 API Documentation — Swagger/OpenAPI [💻 PC]** — ⚪ Post-MVP [P3]
+    - [ ] Add `springdoc-openapi` dependency.
+    - [ ] Annotate all endpoints with `@Operation`, `@ApiResponse`.
+    - [ ] Group endpoints by tag: Auth, Posts, Users, Cabinets, Admin.
+    - [ ] Verify Swagger UI accessible at `/swagger-ui.html`.
+- [ ] **6.6 README.md + Deployment Guide [💻 PC]** — ⚪ Post-MVP [P3]
+    - [ ] Write comprehensive README with project overview, tech stack, setup steps.
+    - [ ] Document environment variables and configuration.
+    - [ ] Write Docker deployment instructions.
+    - [ ] Add architecture diagram (Mermaid).
+- [ ] **6.7 CI/CD Pipeline — GitHub Actions [💻 PC]** — ⚪ Post-MVP [P3]
+    - [ ] Create `.github/workflows/ci.yml` with build + test stages.
+    - [ ] Run `mvn test` and `npm test` on push/PR.
+    - [ ] Add ArchUnit and Cypress to CI pipeline.
+    - [ ] Add Docker build and push step.
+- [ ] **6.8 Final Demo & Project Handover [💻 PC]** — ⚪ Post-MVP
+    - [ ] Record high-quality demo of the full SocialPulse application.
+    - [ ] Prepare presentation for stakeholders.
+    - [ ] Clean up Kanban board: close all completed issues.
+    - [ ] Finalize all documentation.
