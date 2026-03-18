@@ -12,9 +12,16 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+  flyway:
+    enabled: false
   h2:
     console:
       enabled: true
+
+app:
+  security:
+    initial-admin-password: admin123
+    initial-cm-password: cm123
 
 jwt:
   secret: THIS_IS_A_TEST_SECRET_KEY_FOR_JWT_VALIDATION_PURPOSES_ONLY_12345

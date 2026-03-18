@@ -59,6 +59,9 @@ desktop.ini
 # Logs
 logs/
 *.log
+social-pulse/*.log
+frontend/*.log
+!**/src/main/**/logs/
 
 # Docker
 docker-compose.override.yml
@@ -86,6 +89,16 @@ frontend/.idea/
 frontend/.pnp.*
 frontend/.eslintcache
 # Maven
+social-pulse/target/
+social-pulse/out/
+social-pulse/.idea/
+social-pulse/.apt_generated/
+social-pulse/.classpath/
+social-pulse/.factorypath/
+social-pulse/.project/
+social-pulse/.settings/
+social-pulse/.springBeans/
+social-pulse/.sts4-cache/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -94,4 +107,10 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
+social-pulse/HELP.md
+
+# General ignores
+.DS_Store
+Thumbs.db
+desktop.ini
 

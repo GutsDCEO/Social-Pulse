@@ -2,12 +2,11 @@ package com.guts.socialpulse.controller;
 
 import com.guts.socialpulse.domain.entity.Cabinet;
 import com.guts.socialpulse.domain.entity.User;
+import com.guts.socialpulse.domain.enums.CabinetStatus;
 import com.guts.socialpulse.domain.enums.Role;
-import com.guts.socialpulse.dto.AuthResponse;
 import com.guts.socialpulse.dto.LoginRequest;
 import com.guts.socialpulse.repository.CabinetRepository;
 import com.guts.socialpulse.repository.UserRepository;
-import com.guts.socialpulse.security.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +18,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,9 +33,6 @@ public class AuthControllerIntegrationTest {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private ObjectMapper objectMapper;
 
-    @Value("${app.security.initial-admin-password:admin123}")
-    private String adminPassword;
-
     @Value("${app.security.initial-cm-password:cm123}")
     private String cmPassword;
 
@@ -49,7 +43,7 @@ public class AuthControllerIntegrationTest {
 
         Cabinet cabinet = Cabinet.builder()
                 .name("Test Cabinet")
-                .status("ACTIF")
+                .status(CabinetStatus.ACTIF)
                 .build();
         cabinetRepository.save(cabinet);
 
@@ -60,7 +54,7 @@ public class AuthControllerIntegrationTest {
                 .password(passwordEncoder.encode(cmPassword))
                 .isActive(true)
                 .build();
-        user.getCabinetRoles().put(cabinet, Role.CM);
+        user.addCabinetRole(cabinet, Role.CM);
         userRepository.save(user);
     }
 
