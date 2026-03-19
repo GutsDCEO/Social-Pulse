@@ -2,6 +2,7 @@ package com.guts.socialpulse.config;
 
 import com.guts.socialpulse.domain.entity.Cabinet;
 import com.guts.socialpulse.domain.entity.User;
+import com.guts.socialpulse.domain.enums.CabinetStatus;
 import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.repository.CabinetRepository;
 import com.guts.socialpulse.repository.UserRepository;
@@ -11,8 +12,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Map;
 
 @Configuration
 @Profile("dev")
@@ -35,7 +34,7 @@ public class DataInitializer implements CommandLineRunner {
             Cabinet demoCabinet = Cabinet.builder()
                     .name("Cabinet Stagiaire & Associés")
                     .barreau("Barreau de Paris")
-                    .status("ACTIF")
+                    .status(CabinetStatus.ACTIF)
                     .build();
             cabinetRepository.save(demoCabinet);
 
@@ -46,9 +45,9 @@ public class DataInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode(initialAdminPassword))
                     .isActive(true)
                     .build();
-            admin.getCabinetRoles().put(demoCabinet, Role.ADMIN);
+            admin.addCabinetRole(demoCabinet, Role.ADMIN);
             userRepository.save(admin);
-            
+
             User cm = User.builder()
                     .fullName("CM User")
                     .username("cm")
@@ -56,7 +55,7 @@ public class DataInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode(initialCmPassword))
                     .isActive(true)
                     .build();
-            cm.getCabinetRoles().put(demoCabinet, Role.CM);
+            cm.addCabinetRole(demoCabinet, Role.CM);
             userRepository.save(cm);
         }
     }
