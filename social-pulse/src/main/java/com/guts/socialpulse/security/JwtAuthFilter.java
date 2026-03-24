@@ -1,5 +1,6 @@
-package com.guts.socialpulse.security;
+zpackage com.guts.socialpulse.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,51 +15,79 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Intercepts every request exactly once to validate JWT and establish the security context.
+ *
+ * Multi-tenancy: Reads the {@code X-Cabinet-Context} header and, if valid, sets
+ * the active cabinet and its associated role into {@link TenantContext}.
+ *
+ * OWASP A01: All endpoints not whitelisted in SecurityConfig require a valid token.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtUtils jwtUtils;
+    private static final String CABINET_CONTEXT_HEADER = "X-Cabinet-Context";
+
+    private final JwtTokenProvider      jwtTokenProvider;
     private final CustomUserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
+            HttpServletRequest  request,
             HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+            FilterChain         filterChain) throws ServletException, IOException {
 
         try {
             String token = parseJwt(request);
-            if (token != null && jwtUtils.validateToken(token)) {
-                String username = jwtUtils.getUsernameFromToken(token);
+
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                Claims claims  = jwtTokenProvider.getClaimsFromToken(token);
+                String username = claims.getSubject();
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                // Multi-tenancy logic
-                String cabinetHeader = request.getHeader("X-Cabinet-Context");
-                // TODO: Extract roles map and activeCabinetId from JWT claims efficiently
-                // For MVP simplicity, we might re-parse claims here or store them in UserPrincipal
-
-                // Simplified for now: assume valid if token is valid
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                
-                // Set TenantContext if header present
+
+                // ── Multi-tenancy: resolve active cabinet and role from JWT claims ──
+                String cabinetHeader = request.getHeader(CABINET_CONTEXT_HEADER);
                 if (cabinetHeader != null) {
-                    TenantContext.setCabinetId(UUID.fromString(cabinetHeader));
-                    // In a real scenario, we'd also set the Role by matching cabinetHeader against JWT roles
+                    try {
+                        UUID requestedCabinetId = UUID.fromString(cabinetHeader);
+                        TenantContext.setCabinetId(requestedCabinetId);
+
+                        // Extract the roles map ( cabinetId (String) -> roleName (String) )
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> rolesMap =
+                                (Map<String, String>) claims.get(JwtTokenProvider.CLAIM_ROLES);
+
+                        if (rolesMap != null) {
+                            String roleName = rolesMap.get(requestedCabinetId.toString());
+                            if (roleName != null) {
+                                TenantContext.setCurrentRole(
+                                        com.guts.socialpulse.domain.enums.Role.valueOf(roleName));
+                            }
+                        }
+                    } catch (IllegalArgumentException ex) {
+                        log.warn("Invalid UUID in X-Cabinet-Context header: {}", cabinetHeader);
+                    }
                 }
             }
         } catch (Exception e) {
             log.error("Cannot set user authentication: {}", e.getMessage());
         } finally {
+            // IMPORTANT: ThreadLocal must be cleaned AFTER the chain so downstream code can still read it,
+            // but before the thread is returned to the pool to prevent context leakage.
             filterChain.doFilter(request, response);
-            TenantContext.clear(); // Important: keep ThreadLocal clean
+            TenantContext.clear();
         }
     }
 
