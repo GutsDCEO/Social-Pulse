@@ -80,9 +80,8 @@ out/
 .fusebox/
 .vike/
 
-# Frontend (Next.js)
-frontend/.next/
-frontend/out/
+# Frontend (Vite + React)
+frontend/dist/
 frontend/build/
 frontend/node_modules/
 frontend/.idea/
