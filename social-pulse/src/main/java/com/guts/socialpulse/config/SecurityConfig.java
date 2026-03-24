@@ -26,7 +26,8 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // OWASP A07: strength=12 is the current recommended minimum for BCrypt
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean

@@ -113,4 +113,12 @@ social-pulse/HELP.md
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Project Management / Task Files
+Social-Pulse-Issues.csv
+Social-Pulse-Parsed.csv
+Convert-Kanban.ps1
+nassima.txt
+*.csv
+*.ps1
 
