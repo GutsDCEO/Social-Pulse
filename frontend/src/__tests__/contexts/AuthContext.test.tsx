@@ -1,28 +1,43 @@
 // ============================================================
 // src/__tests__/contexts/AuthContext.test.tsx
 // TDD: Tests for AuthProvider + useAuth() hook.
-// Uses vi.hoisted() for Vitest 4.x ESM-safe mocking.
+// Updated to match the new flat AuthResponse and User types.
 // ============================================================
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
-import type { AuthResponse } from '../../types/auth';
+import type { AuthResponse, User } from '../../types/auth';
 
 // vi.hoisted() — evaluated BEFORE module imports in Vitest 4.x ESM
 const mockLoginFn  = vi.hoisted(() => vi.fn());
 const mockLogoutFn = vi.hoisted(() => vi.fn());
-const mockGetMeFn  = vi.hoisted(() => vi.fn());
 
 vi.mock('../../services/authService', () => ({
   login:  mockLoginFn,
   logout: mockLogoutFn,
-  getMe:  mockGetMeFn,
 }));
 
-const mockUser = { id: 1, login: 'testuser', role: 'admin' as const, pole_id: null };
-const mockAuth: AuthResponse = { token: 'mock.jwt.token', user: mockUser };
+// Matches the new flat User shape (built from AuthResponse by AuthContext)
+const mockUser: User = {
+  id:              'uuid-1234',
+  username:        'testuser',
+  cabinetRoles:    {},
+  activeCabinetId: null,
+  isAdmin:         false,
+};
+
+// Matches the flat AuthResponse.java shape
+const mockAuth: AuthResponse = {
+  token:           'mock.jwt.token',
+  type:            'Bearer',
+  userId:          'uuid-1234',
+  username:        'testuser',
+  cabinetRoles:    {},
+  activeCabinetId: null,
+};
 
 // ─── Helper consumer component ───────────────────────────────
 const TestConsumer: React.FC = () => {
@@ -31,9 +46,9 @@ const TestConsumer: React.FC = () => {
     <div>
       <div data-testid="loading">{String(isLoading)}</div>
       <div data-testid="authenticated">{String(isAuthenticated)}</div>
-      <div data-testid="user">{user?.login ?? 'null'}</div>
-      <div data-testid="hasAdmin">{String(hasRole('admin'))}</div>
-      <button data-testid="login-btn" onClick={() => login({ login: 'testuser', password: 'pass' })}>Login</button>
+      <div data-testid="user">{user?.username ?? 'null'}</div>
+      <div data-testid="hasAdmin">{String(hasRole('CABINET_ADMIN'))}</div>
+      <button data-testid="login-btn" onClick={() => login({ username: 'testuser', password: 'pass' })}>Login</button>
       <button data-testid="logout-btn" onClick={() => logout()}>Logout</button>
     </div>
   );
@@ -90,12 +105,12 @@ describe('AuthContext', () => {
     expect(sessionStorage.getItem('sp_token')).toBeNull();
   });
 
-  it('hasRole() returns true for matching role', async () => {
+  it('hasRole() returns false for non-matching role', async () => {
     sessionStorage.setItem('sp_token', 'tok');
-    sessionStorage.setItem('sp_user', JSON.stringify(mockUser)); // role: admin
+    sessionStorage.setItem('sp_user', JSON.stringify(mockUser)); // cabinetRoles: {}
 
     render(<AuthProvider><TestConsumer /></AuthProvider>);
-    await waitFor(() => expect(screen.getByTestId('hasAdmin').textContent).toBe('true'));
+    await waitFor(() => expect(screen.getByTestId('hasAdmin').textContent).toBe('false'));
   });
 
   it('useAuth() throws if used outside AuthProvider', () => {

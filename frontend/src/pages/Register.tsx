@@ -1,53 +1,82 @@
 // ============================================================
 // src/pages/Register.tsx
-// Registration page — premium dark UI.
+// Registration page — aligned with backend RegisterRequest.java.
+// Fields: username, email, password, fullName.
+// A03 OWASP: Client-side validation before any network call.
+// A09 OWASP: Generic error messages only.
 // ============================================================
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import * as authService from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
-import type { LoginCredentials } from '../types/auth';
+import type { RegisterCredentials } from '../types/auth';
+
+// ── Constants (no magic strings) ──────────────────────────────
+const MIN_PASSWORD_LENGTH = 8;
 
 const Register: React.FC = () => {
-  const [form, setForm]     = useState({ login: '', password: '', confirmPassword: '' });
-  const [error, setError]   = useState('');
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+  });
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate  = useNavigate();
 
+  // ── A03: Client-side boundary validation ──────────────────
+  const validate = (): string | null => {
+    if (form.username.length < 3)  return 'Le nom d\'utilisateur doit contenir au moins 3 caractères.';
+    if (!form.email.includes('@'))  return 'Veuillez entrer une adresse e-mail valide.';
+    if (form.fullName.trim() === '') return 'Le nom complet est requis.';
+    if (form.password.length < MIN_PASSWORD_LENGTH)
+      return `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`;
+    if (form.password !== form.confirmPassword)
+      return 'Les mots de passe ne correspondent pas.';
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (form.password !== form.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas.');
-      return;
-    }
-    if (form.password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.');
-      return;
-    }
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
 
     setLoading(true);
     try {
-      // POST /auth/register via Spring Boot, then auto-login
-      const res = await fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api'}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: form.login, password: form.password, role: 'viewer' }),
-      });
-      if (!res.ok) throw new Error();
-      const creds: LoginCredentials = { login: form.login, password: form.password };
-      await login(creds);
+      // Use authService (not raw fetch) — goes through api.ts interceptors
+      const credentials: RegisterCredentials = {
+        username: form.username,
+        email:    form.email,
+        password: form.password,
+        fullName: form.fullName,
+      };
+      await authService.register(credentials);
+      // Auto-login after successful registration
+      await login({ username: form.username, password: form.password });
       navigate('/onboarding', { replace: true });
     } catch {
+      // A09: Generic message — no backend details exposed
       setError('Erreur lors de la création du compte. Réessayez.');
     } finally {
       setLoading(false);
     }
   };
+
+  const fields: Array<{ key: keyof typeof form; label: string; type: string }> = [
+    { key: 'fullName',        label: 'Nom complet',           type: 'text'     },
+    { key: 'username',        label: 'Identifiant',           type: 'text'     },
+    { key: 'email',           label: 'Adresse e-mail',        type: 'email'    },
+    { key: 'password',        label: 'Mot de passe',          type: 'password' },
+    { key: 'confirmPassword', label: 'Confirmer le mot de passe', type: 'password' },
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
@@ -67,19 +96,19 @@ const Register: React.FC = () => {
 
         <div className="card">
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {(['login', 'password', 'confirmPassword'] as const).map((field) => (
-              <div key={field}>
+            {fields.map(({ key, label, type }) => (
+              <div key={key}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>
-                  {field === 'login' ? 'Identifiant' : field === 'password' ? 'Mot de passe' : 'Confirmer le mot de passe'}
+                  {label}
                 </label>
                 <input
+                  id={key}
                   className="input"
-                  type={field === 'login' ? 'text' : 'password'}
-                  value={form[field]}
-                  onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+                  type={type}
+                  value={form[key]}
+                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                   required
-                  minLength={field !== 'login' ? 8 : undefined}
-                  autoComplete={field === 'login' ? 'username' : 'new-password'}
+                  autoComplete={type === 'email' ? 'email' : type === 'password' ? 'new-password' : 'off'}
                 />
               </div>
             ))}
@@ -92,7 +121,7 @@ const Register: React.FC = () => {
           </form>
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)' }}>
-            Déjà un compte ?{' '}
+            Déjà un compte?{' '}
             <Link to="/login" style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}>Se connecter</Link>
           </p>
         </div>

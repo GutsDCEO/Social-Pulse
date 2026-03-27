@@ -15,7 +15,7 @@ const Settings: React.FC = () => {
         <div className="card">
           <h2 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '1rem' }}>Informations du compte</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {[['Identifiant', user?.login ?? '', 'text'], ['Rôle', user?.role ?? '', 'text'], ['Nouveau mot de passe', '', 'password']].map(([label, val, type]) => (
+            {[['Identifiant', user?.username ?? '', 'text'], ['Admin global', user?.isAdmin ? 'Oui' : 'Non', 'text'], ['Nouveau mot de passe', '', 'password']].map(([label, val, type]) => (
               <div key={label}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>{label}</label>
                 <input className="input" type={type} defaultValue={val} readOnly={label === 'Rôle'} style={label === 'Rôle' ? { opacity: 0.5 } : undefined} />

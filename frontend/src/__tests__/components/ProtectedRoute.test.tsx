@@ -27,7 +27,7 @@ const renderWithRouter = (initialPath: string) =>
         <Route path="/login"     element={<LoginPage />} />
         <Route path="/dashboard" element={<DashPage />} />
         <Route path="/secret"    element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['CABINET_ADMIN']}>
             <Protected />
           </ProtectedRoute>
         } />
@@ -64,7 +64,7 @@ describe('ProtectedRoute', () => {
     mockUseAuthFn.mockReturnValue({
       isLoading: false,
       isAuthenticated: true,
-      hasRole: (...roles: string[]) => roles.includes('admin'),
+      hasRole: (...roles: string[]) => roles.includes('CABINET_ADMIN'),
     });
     renderWithRouter('/secret');
     expect(screen.getByText('Protected Content')).toBeTruthy();

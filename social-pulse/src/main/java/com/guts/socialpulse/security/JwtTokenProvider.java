@@ -29,6 +29,14 @@ public class JwtTokenProvider {
     public static final String CLAIM_ROLES            = "roles";
     public static final String CLAIM_ACTIVE_CABINET   = "activeCabinetId";
     public static final String CLAIM_IS_SIMULATING    = "isSimulating";
+    public static final String CLAIM_IS_ADMIN         = "isAdmin";
+
+    /**
+     * Key used to store the parsed {@link Claims} object as a request attribute.
+     * Set by {@code JwtAuthFilter}, consumed by {@code TenantContextFilter} and
+     * {@code SimulationModeInterceptor} — avoids re-parsing the JWT multiple times per request.
+     */
+    public static final String CLAIMS_ATTRIBUTE       = "jwt.claims";
 
     // ── State ──────────────────────────────────────────────────────────────────
     private final SecretKey key;

@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontWeight: 800, fontSize: '1.8rem', marginBottom: '0.25rem' }}>
-            {greeting}{user?.login ? `, ${user.login}` : ''} 👋
+            {greeting}{user?.username ? `, ${user.username}` : ''} 👋
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Clock size={14} />

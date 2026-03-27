@@ -1,0 +1,28 @@
+# Version Control
+.git
+.github
+.gitignore
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# Backend 
+social-pulse/target
+social-pulse/mvnw
+social-pulse/mvnw.cmd
+social-pulse/.mvn
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Docker logs
+*.log
+docker-compose.override.yml

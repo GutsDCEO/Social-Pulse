@@ -7,12 +7,12 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import type { UserRole } from '../types/auth';
+import type { CabinetRole } from '../types/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   /** If provided, user must have at least one of these roles. */
-  allowedRoles?: UserRole[];
+  allowedRoles?: CabinetRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {

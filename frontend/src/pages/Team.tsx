@@ -8,7 +8,7 @@ const MEMBERS = [
   { name: 'Sophie Martin', role: 'Viewer', email: 'sophie@sp.pro', status: 'Invité' },
 ];
 const Team: React.FC = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   return (
     <div style={{ padding: '2rem', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -16,7 +16,7 @@ const Team: React.FC = () => {
           <div style={{ width: 40, height: 40, borderRadius: '0.75rem', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} style={{ color: '#10b981' }} /></div>
           <div><h1 style={{ fontWeight: 800, fontSize: '1.5rem' }}>Équipe</h1><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>{MEMBERS.length} membres</p></div>
         </div>
-        {hasRole('admin', 'chef_pole') && <button className="btn-primary"><UserPlus size={16} /> Inviter</button>}
+        {(hasRole('CABINET_ADMIN') || user?.isAdmin) && <button className="btn-primary"><UserPlus size={16} /> Inviter</button>}
       </div>
       <div className="card">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

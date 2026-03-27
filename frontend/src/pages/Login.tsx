@@ -14,7 +14,7 @@ import type { LoginCredentials } from '../types/auth';
 type LocationState = { from?: { pathname: string } };
 
 const Login: React.FC = () => {
-  const [form, setForm] = useState<LoginCredentials>({ login: '', password: '' });
+  const [form, setForm] = useState<LoginCredentials>({ username: '', password: '' });
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,8 +82,8 @@ const Login: React.FC = () => {
                 className="input"
                 type="text"
                 placeholder="Votre identifiant"
-                value={form.login}
-                onChange={(e) => setForm((f) => ({ ...f, login: e.target.value }))}
+                value={form.username}
+                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
                 required
                 autoFocus
                 autoComplete="username"

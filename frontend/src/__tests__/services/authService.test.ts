@@ -1,7 +1,7 @@
 // ============================================================
 // src/__tests__/services/authService.test.ts
 // TDD: FIRST-compliant tests for authService.
-// Uses vi.hoisted() for Vitest 4.x ESM-safe mocking.
+// Updated to match the new flat AuthResponse and renamed fields.
 // ============================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -14,11 +14,18 @@ vi.mock('../../services/api', () => ({
   default: { post: mockPost, get: mockGet },
 }));
 
-import { login, register, logout, getMe } from '../../services/authService';
-import type { AuthResponse, User } from '../../types/auth';
+import { login, register, logout } from '../../services/authService';
+import type { AuthResponse } from '../../types/auth';
 
-const mockUser: User = { id: 1, login: 'testuser', role: 'viewer', pole_id: null };
-const mockAuth: AuthResponse = { token: 'jwt.test.token', user: mockUser };
+// Matches the flat AuthResponse.java shape
+const mockAuth: AuthResponse = {
+  token:           'jwt.test.token',
+  type:            'Bearer',
+  userId:          'uuid-1234',
+  username:        'testuser',
+  cabinetRoles:    {},
+  activeCabinetId: null,
+};
 
 describe('authService', () => {
   beforeEach(() => {
@@ -27,61 +34,58 @@ describe('authService', () => {
 
   // ── login ─────────────────────────────────────────────────
   describe('login()', () => {
-    it('calls POST /auth/login with credentials and returns AuthResponse', async () => {
+    it('calls POST /v1/auth/login with credentials and returns AuthResponse', async () => {
       mockPost.mockResolvedValueOnce({ data: mockAuth });
 
-      const result = await login({ login: 'testuser', password: 'password123' });
+      const result = await login({ username: 'testuser', password: 'password123' });
 
-      expect(mockPost).toHaveBeenCalledWith('/auth/login', {
-        login: 'testuser',
+      expect(mockPost).toHaveBeenCalledWith('/v1/auth/login', {
+        username: 'testuser',
         password: 'password123',
       });
-      expect(result).toEqual(mockAuth);
+      expect(result.token).toBe('jwt.test.token');
+      expect(result.username).toBe('testuser');
     });
 
     it('throws when Spring Boot returns 401', async () => {
       mockPost.mockRejectedValueOnce({ response: { status: 401 } });
-      await expect(login({ login: 'bad', password: 'wrong' })).rejects.toBeDefined();
+      await expect(login({ username: 'bad', password: 'wrong' })).rejects.toBeDefined();
     });
 
     it('throws on network error', async () => {
       mockPost.mockRejectedValueOnce(new Error('Network Error'));
-      await expect(login({ login: 'user', password: 'pass' })).rejects.toThrow('Network Error');
+      await expect(login({ username: 'user', password: 'pass' })).rejects.toThrow('Network Error');
     });
   });
 
   // ── register ──────────────────────────────────────────────
   describe('register()', () => {
-    it('calls POST /auth/register and returns AuthResponse', async () => {
+    it('calls POST /v1/auth/register with all required fields and returns AuthResponse', async () => {
       mockPost.mockResolvedValueOnce({ data: mockAuth });
 
-      const result = await register({ login: 'newuser', password: 'password123', role: 'viewer' });
+      const result = await register({
+        username: 'newuser',
+        email:    'new@example.com',
+        password: 'password123',
+        fullName: 'New User',
+      });
 
-      expect(mockPost).toHaveBeenCalledWith('/auth/register', {
-        login: 'newuser', password: 'password123', role: 'viewer',
+      expect(mockPost).toHaveBeenCalledWith('/v1/auth/register', {
+        username: 'newuser',
+        email:    'new@example.com',
+        password: 'password123',
+        fullName: 'New User',
       });
       expect(result.token).toBe('jwt.test.token');
     });
   });
 
-  // ── getMe ─────────────────────────────────────────────────
-  describe('getMe()', () => {
-    it('calls GET /auth/me and returns the User', async () => {
-      mockGet.mockResolvedValueOnce({ data: mockUser });
-
-      const result = await getMe();
-
-      expect(mockGet).toHaveBeenCalledWith('/auth/me');
-      expect(result.id).toBe(1);
-    });
-  });
-
   // ── logout ────────────────────────────────────────────────
   describe('logout()', () => {
-    it('calls POST /auth/logout', async () => {
+    it('calls POST /v1/auth/logout', async () => {
       mockPost.mockResolvedValueOnce({ data: {} });
       await logout();
-      expect(mockPost).toHaveBeenCalledWith('/auth/logout');
+      expect(mockPost).toHaveBeenCalledWith('/v1/auth/logout');
     });
   });
 });
