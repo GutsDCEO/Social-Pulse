@@ -120,4 +120,6 @@ Convert-Kanban.ps1
 nassima.txt
 *.csv
 *.ps1
-
+.env.example
+social-pulse/test-log.txt
+package-lock.json

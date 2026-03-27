@@ -118,6 +118,7 @@ public class AuthService {
         claims.put(JwtTokenProvider.CLAIM_ROLES,          rolesMap);
         claims.put(JwtTokenProvider.CLAIM_ACTIVE_CABINET, activeCabinetId);
         claims.put(JwtTokenProvider.CLAIM_IS_SIMULATING,  false);
+        claims.put(JwtTokenProvider.CLAIM_IS_ADMIN,       user.isAdmin());
 
         String token = jwtTokenProvider.generateToken(user.getUsername(), claims);
 

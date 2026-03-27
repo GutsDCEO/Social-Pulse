@@ -15,38 +15,38 @@ export interface Module { readonly id: number; readonly nom: string; readonly vo
 
 export const referentielService = {
   // Pôles
-  getPoles: () => api.get<Pole[]>('/referentiel/poles'),
-  createPole: (data: Omit<Pole, 'id'>) => api.post<Pole>('/referentiel/poles', data),
-  updatePole: (id: number, data: Omit<Pole, 'id'>) => api.put<Pole>(`/referentiel/poles/${id}`, data),
-  deletePole: (id: number) => api.delete(`/referentiel/poles/${id}`),
+  getPoles: () => api.get<Pole[]>('/v1/referentiel/poles'),
+  createPole: (data: Omit<Pole, 'id'>) => api.post<Pole>('/v1/referentiel/poles', data),
+  updatePole: (id: number, data: Omit<Pole, 'id'>) => api.put<Pole>(`/v1/referentiel/poles/${id}`, data),
+  deletePole: (id: number) => api.delete(`/v1/referentiel/poles/${id}`),
 
   // Filières
-  getFilieres: (pole_id?: number) => api.get<Filiere[]>('/referentiel/filieres', { params: { pole_id } }),
-  createFiliere: (data: Omit<Filiere, 'id'>) => api.post<Filiere>('/referentiel/filieres', data),
-  updateFiliere: (id: number, data: Omit<Filiere, 'id'>) => api.put<Filiere>(`/referentiel/filieres/${id}`, data),
-  deleteFiliere: (id: number) => api.delete(`/referentiel/filieres/${id}`),
+  getFilieres: (pole_id?: number) => api.get<Filiere[]>('/v1/referentiel/filieres', { params: { pole_id } }),
+  createFiliere: (data: Omit<Filiere, 'id'>) => api.post<Filiere>('/v1/referentiel/filieres', data),
+  updateFiliere: (id: number, data: Omit<Filiere, 'id'>) => api.put<Filiere>(`/v1/referentiel/filieres/${id}`, data),
+  deleteFiliere: (id: number) => api.delete(`/v1/referentiel/filieres/${id}`),
 
   // Groupes
-  getGroupes: (filiere_id?: number) => api.get<Groupe[]>('/referentiel/groupes', { params: { filiere_id } }),
-  createGroupe: (data: Omit<Groupe, 'id'>) => api.post<Groupe>('/referentiel/groupes', data),
-  updateGroupe: (id: number, data: Omit<Groupe, 'id'>) => api.put<Groupe>(`/referentiel/groupes/${id}`, data),
-  deleteGroupe: (id: number) => api.delete(`/referentiel/groupes/${id}`),
+  getGroupes: (filiere_id?: number) => api.get<Groupe[]>('/v1/referentiel/groupes', { params: { filiere_id } }),
+  createGroupe: (data: Omit<Groupe, 'id'>) => api.post<Groupe>('/v1/referentiel/groupes', data),
+  updateGroupe: (id: number, data: Omit<Groupe, 'id'>) => api.put<Groupe>(`/v1/referentiel/groupes/${id}`, data),
+  deleteGroupe: (id: number) => api.delete(`/v1/referentiel/groupes/${id}`),
 
   // Salles
-  getSalles: (params?: { pole_id?: number; type?: string }) => api.get<Salle[]>('/referentiel/salles', { params }),
-  createSalle: (data: Omit<Salle, 'id'>) => api.post<Salle>('/referentiel/salles', data),
-  updateSalle: (id: number, data: Omit<Salle, 'id'>) => api.put<Salle>(`/referentiel/salles/${id}`, data),
-  deleteSalle: (id: number) => api.delete(`/referentiel/salles/${id}`),
+  getSalles: (params?: { pole_id?: number; type?: string }) => api.get<Salle[]>('/v1/referentiel/salles', { params }),
+  createSalle: (data: Omit<Salle, 'id'>) => api.post<Salle>('/v1/referentiel/salles', data),
+  updateSalle: (id: number, data: Omit<Salle, 'id'>) => api.put<Salle>(`/v1/referentiel/salles/${id}`, data),
+  deleteSalle: (id: number) => api.delete(`/v1/referentiel/salles/${id}`),
 
   // Formateurs
-  getFormateurs: (pole_id?: number) => api.get<Formateur[]>('/referentiel/formateurs', { params: { pole_id } }),
-  createFormateur: (data: Omit<Formateur, 'id'>) => api.post<Formateur>('/referentiel/formateurs', data),
-  updateFormateur: (id: number, data: Omit<Formateur, 'id'>) => api.put<Formateur>(`/referentiel/formateurs/${id}`, data),
-  deleteFormateur: (id: number) => api.delete(`/referentiel/formateurs/${id}`),
+  getFormateurs: (pole_id?: number) => api.get<Formateur[]>('/v1/referentiel/formateurs', { params: { pole_id } }),
+  createFormateur: (data: Omit<Formateur, 'id'>) => api.post<Formateur>('/v1/referentiel/formateurs', data),
+  updateFormateur: (id: number, data: Omit<Formateur, 'id'>) => api.put<Formateur>(`/v1/referentiel/formateurs/${id}`, data),
+  deleteFormateur: (id: number) => api.delete(`/v1/referentiel/formateurs/${id}`),
 
   // Modules
-  getModules: (filiere_id?: number) => api.get<Module[]>('/referentiel/modules', { params: { filiere_id } }),
-  createModule: (data: Omit<Module, 'id'>) => api.post<Module>('/referentiel/modules', data),
-  updateModule: (id: number, data: Omit<Module, 'id'>) => api.put<Module>(`/referentiel/modules/${id}`, data),
-  deleteModule: (id: number) => api.delete(`/referentiel/modules/${id}`),
+  getModules: (filiere_id?: number) => api.get<Module[]>('/v1/referentiel/modules', { params: { filiere_id } }),
+  createModule: (data: Omit<Module, 'id'>) => api.post<Module>('/v1/referentiel/modules', data),
+  updateModule: (id: number, data: Omit<Module, 'id'>) => api.put<Module>(`/v1/referentiel/modules/${id}`, data),
+  deleteModule: (id: number) => api.delete(`/v1/referentiel/modules/${id}`),
 };

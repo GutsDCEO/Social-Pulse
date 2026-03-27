@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, Calendar, MessageSquare, TrendingUp, Users, Zap, ChevronRight, Check, ArrowRight } from 'lucide-react';
+import BackendStatus from '../components/BackendStatus';
 
 const FEATURES = [
   { icon: Calendar,      title: 'Calendrier éditorial',  desc: 'Planifiez vos publications en avance avec un calendrier drag & drop intuitif.' },
@@ -41,6 +42,9 @@ const Landing: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: 'white' }}>S</div>
             <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>Social<span style={{ color: '#a78bfa' }}>Pulse</span><span style={{ color: '#ec4899', fontSize: '0.7rem', marginLeft: 2 }}>.pro</span></span>
+            <div style={{ marginLeft: '1rem' }}>
+              <BackendStatus />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <Link to="/login"    className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.9rem' }}>Connexion</Link>

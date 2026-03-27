@@ -1,13 +1,21 @@
 package com.guts.socialpulse.controller;
 
 import com.guts.socialpulse.dto.ErrorResponse;
+import com.guts.socialpulse.exception.CabinetNotFoundException;
 import com.guts.socialpulse.exception.DuplicateResourceException;
+import com.guts.socialpulse.exception.SimulationWriteBlockedException;
+import com.guts.socialpulse.exception.UnauthorizedCabinetAccessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -29,6 +37,38 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex) {
         log.warn("Duplicate resource conflict: {}", ex.getMessage());
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    /** 404 Not Found — cabinet UUID does not exist in the database */
+    @ExceptionHandler(CabinetNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCabinetNotFound(CabinetNotFoundException ex) {
+        log.warn("Cabinet not found: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /** 403 Forbidden — user is not assigned to the requested cabinet */
+    @ExceptionHandler(UnauthorizedCabinetAccessException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorizedCabinet(UnauthorizedCabinetAccessException ex) {
+        log.warn("Unauthorized cabinet access attempt: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    /** 403 Forbidden — write operation attempted in simulation mode */
+    @ExceptionHandler(SimulationWriteBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleSimulationWrite(SimulationWriteBlockedException ex) {
+        log.warn("Simulation-mode write blocked: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    /** 403 Forbidden — Method security or standard access denied */
+    @ExceptionHandler({AuthorizationDeniedException.class, AccessDeniedException.class})
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(RuntimeException ex) {
+        log.warn("Access denied (Spring Security): {}", ex.getMessage());
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth instanceof AnonymousAuthenticationToken || !auth.isAuthenticated()) {
+            return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid or missing credentials");
+        }
+        return buildResponse(HttpStatus.FORBIDDEN, "Access Denied");
     }
 
     /** 401 Unauthorized — bad credentials, disabled account, user not found */

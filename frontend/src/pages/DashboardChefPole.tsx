@@ -25,7 +25,7 @@ const DashboardChefPole: React.FC = () => {
 
     const fetchStats = async () => {
         try {
-            const response = await planningAPI.getDashboardStats(user?.pole_id || undefined);
+            const response = await planningAPI.getDashboardStats(undefined);
             setStats(response.data.stats);
         } catch (error) {
             console.error('Erreur chargement stats:', error);
@@ -56,7 +56,7 @@ const DashboardChefPole: React.FC = () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Dashboard - Chef de Pôle</h1>
-                                <p className="text-sm text-gray-600">Bienvenue, {user?.login}</p>
+                                <p className="text-sm text-gray-600">Bienvenue, {user?.username}</p>
                             </div>
                         </div>
                         <button onClick={logout} className="btn-secondary">

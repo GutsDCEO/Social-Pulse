@@ -1,16 +1,26 @@
 // ============================================================
 // src/contexts/AuthContext.tsx
-// Upgraded: imports from types/, uses authService (abstraction),
-// sessionStorage for tokens (OWASP A02), hasRole() helper.
+// Manages global auth state (JWT + User) using sessionStorage.
+// Aligned with the flat AuthResponse from the backend.
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import * as authService from '../services/authService';
-import type { User, UserRole, LoginCredentials, AuthContextValue } from '../types/auth';
+import type { User, CabinetRole, LoginCredentials, AuthContextValue } from '../types/auth';
 
 // ─── Context ────────────────────────────────────────────────
-// Created with undefined so useAuth() can detect usage outside provider.
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+// ─── Helper: build a User object from the flat AuthResponse fields ─
+function buildUser(
+  userId: string,
+  username: string,
+  cabinetRoles: Record<string, CabinetRole>,
+  activeCabinetId: string | null,
+  isAdmin: boolean,
+): User {
+  return { id: userId, username, cabinetRoles, activeCabinetId, isAdmin };
+}
 
 // ─── Provider ───────────────────────────────────────────────
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -23,13 +33,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // preventing token leakage across browser sessions.
   useEffect(() => {
     const storedToken = sessionStorage.getItem('sp_token');
-    const storedUser = sessionStorage.getItem('sp_user');
+    const storedUser  = sessionStorage.getItem('sp_user');
     if (storedToken && storedUser) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser) as User);
       } catch {
-        // Corrupted storage — clear it silently (fail early, no silent state corruption)
+        // Corrupted storage — clear silently (fail early, A09 OWASP)
         sessionStorage.removeItem('sp_token');
         sessionStorage.removeItem('sp_user');
       }
@@ -39,19 +49,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // ─── login ────────────────────────────────────────────────
   // Calls authService (abstraction), never Axios directly.
-  // On failure: rethrows so the UI can display a generic message.
+  // Builds the User from the flat AuthResponse shape.
   const login = useCallback(async (credentials: LoginCredentials): Promise<void> => {
-    try {
-      const { token: newToken, user: newUser } = await authService.login(credentials);
-      setToken(newToken);
-      setUser(newUser);
-      sessionStorage.setItem('sp_token', newToken);
-      sessionStorage.setItem('sp_user', JSON.stringify(newUser));
-    } catch (error: unknown) {
-      // A09 OWASP: Rethrow without exposing internal error details.
-      // The UI layer will show a generic "Identifiants invalides" message.
-      throw error;
-    }
+    // A09 OWASP: rethrow without exposing server details — UI shows a generic message.
+    const response = await authService.login(credentials);
+
+    const newUser = buildUser(
+      response.userId,
+      response.username,
+      response.cabinetRoles,
+      response.activeCabinetId,
+      // isAdmin is not in AuthResponse; default false — protected routes use hasRole()
+      false,
+    );
+
+    setToken(response.token);
+    setUser(newUser);
+    sessionStorage.setItem('sp_token', response.token);
+    sessionStorage.setItem('sp_user', JSON.stringify(newUser));
   }, []);
 
   // ─── logout ───────────────────────────────────────────────
@@ -60,17 +75,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     sessionStorage.removeItem('sp_token');
     sessionStorage.removeItem('sp_user');
-    // Fire-and-forget: inform Spring Boot (for refresh-token revocation later)
-    authService.logout().catch(() => {
-      // Ignore logout errors — local state is already cleared
-    });
+    // Fire-and-forget: inform the backend (for future refresh-token revocation)
+    authService.logout().catch(() => { /* local state already cleared */ });
   }, []);
 
   // ─── hasRole ──────────────────────────────────────────────
-  // A01 OWASP: Centralised role check. Never do role checks inline in JSX.
-  const hasRole = useCallback((...roles: UserRole[]): boolean => {
+  // A01 OWASP: Centralised role check.
+  // Returns true if the user holds any of the given roles in ANY cabinet,
+  // or if the user is a global admin.
+  const hasRole = useCallback((...roles: CabinetRole[]): boolean => {
     if (!user) return false;
-    return roles.includes(user.role);
+    if (user.isAdmin) return true;
+    return Object.values(user.cabinetRoles).some((r) => roles.includes(r));
   }, [user]);
 
   const value: AuthContextValue = {
@@ -83,18 +99,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     hasRole,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // ─── Hook ────────────────────────────────────────────────────
-// D-principle: consumers depend on AuthContextValue interface, not the Provider.
+// D principle: consumers depend on the AuthContextValue interface.
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
-  // Fail early: developer error — provide a clear message.
   if (context === undefined) {
     throw new Error('useAuth must be used within an <AuthProvider>. Wrap your app tree.');
   }

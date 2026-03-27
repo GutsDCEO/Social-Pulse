@@ -22,29 +22,29 @@ export type CreneauPayload = Omit<Creneau, 'id'>;
 
 export const planningService = {
   getCreneaux: (params?: Partial<Creneau>) =>
-    api.get<Creneau[]>('/planning/creneaux', { params }),
+    api.get<Creneau[]>('/v1/planning/creneaux', { params }),
 
   createCreneau: (data: CreneauPayload) =>
-    api.post<Creneau>('/planning/creneaux', data),
+    api.post<Creneau>('/v1/planning/creneaux', data),
 
   updateCreneau: (id: number, data: CreneauPayload) =>
-    api.put<Creneau>(`/planning/creneaux/${id}`, data),
+    api.put<Creneau>(`/v1/planning/creneaux/${id}`, data),
 
   deleteCreneau: (id: number) =>
-    api.delete(`/planning/creneaux/${id}`),
+    api.delete(`/v1/planning/creneaux/${id}`),
 
   getFormateurHeures: (formateurId: number) =>
-    api.get(`/planning/formateurs/${formateurId}/heures`),
+    api.get(`/v1/planning/formateurs/${formateurId}/heures`),
 
   getDashboardStats: (pole_id?: number) =>
-    api.get<StatsResponse>('/planning/dashboard/stats', { params: { pole_id } }),
+    api.get<StatsResponse>('/v1/planning/dashboard/stats', { params: { pole_id } }),
 
   exportPDFGroupe: (groupeId: number) =>
-    api.get(`/planning/export/pdf/groupe/${groupeId}`, { responseType: 'blob' }),
+    api.get(`/v1/planning/export/pdf/groupe/${groupeId}`, { responseType: 'blob' }),
 
   exportPDFFormateur: (formateurId: number) =>
-    api.get(`/planning/export/pdf/formateur/${formateurId}`, { responseType: 'blob' }),
+    api.get(`/v1/planning/export/pdf/formateur/${formateurId}`, { responseType: 'blob' }),
 
   exportExcelGlobal: () =>
-    api.get('/planning/export/excel/global', { responseType: 'blob' }),
+    api.get('/v1/planning/export/excel/global', { responseType: 'blob' }),
 };

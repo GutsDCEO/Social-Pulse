@@ -43,6 +43,19 @@ public class User {
     @Column(name = "last_login")
     private Instant lastLogin;
 
+    /**
+     * System-level Super Admin flag.
+     *
+     * TRUE means this user can manage the platform (create cabinets, manage users)
+     * independently of any cabinet role stored in {@code user_cabinets}.
+     *
+     * SOLID-S: Separates platform-level authority from cabinet-scoped roles.
+     * OWASP A01: This flag is the single authoritative gate for cabinet creation.
+     */
+    @Column(name = "is_admin", nullable = false)
+    @Builder.Default
+    private boolean isAdmin = false;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<UserCabinet> userCabinets = new ArrayList<>();

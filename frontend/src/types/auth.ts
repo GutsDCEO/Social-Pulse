@@ -1,33 +1,62 @@
 // ============================================================
 // src/types/auth.ts
 // Single source of truth for all authentication-related types.
-// Import this everywhere — never redefine inline.
+// Aligned with backend AuthResponse.java and AuthService.java.
 // ============================================================
 
-export type UserRole = 'admin' | 'chef_pole' | 'formateur' | 'viewer';
+/**
+ * Cabinet-scoped role string, mirrors the CabinetRole enum on the backend.
+ * A user may have different roles in different cabinets.
+ */
+export type CabinetRole = 'CABINET_ADMIN' | 'MEMBER';
 
+/**
+ * Mirrors the backend User entity fields as returned inside AuthResponse.
+ * - id: UUID stored as a string
+ * - username: login identifier
+ * - cabinetRoles: map of cabinetId -> role for that cabinet
+ * - activeCabinetId: the "current" cabinet context (first cabinet or null)
+ * - isAdmin: global system-admin flag (independent of cabinet roles)
+ */
 export interface User {
-  readonly id: number;
-  readonly login: string;
-  readonly role: UserRole;
-  readonly pole_id: number | null;
+  readonly id: string;
+  readonly username: string;
+  readonly cabinetRoles: Record<string, CabinetRole>;
+  readonly activeCabinetId: string | null;
+  readonly isAdmin: boolean;
 }
 
+/**
+ * Credentials sent to POST /api/v1/auth/login.
+ * Matches LoginRequest.java: { username, password }
+ */
 export interface LoginCredentials {
-  readonly login: string;
+  readonly username: string;
   readonly password: string;
 }
 
+/**
+ * Credentials sent to POST /api/v1/auth/register.
+ * Matches RegisterRequest.java: { username, email, password, fullName }
+ */
 export interface RegisterCredentials {
-  readonly login: string;
+  readonly username: string;
+  readonly email: string;
   readonly password: string;
-  readonly role: UserRole;
-  readonly pole_id?: number;
+  readonly fullName: string;
 }
 
+/**
+ * Flat shape returned by the backend on login/register.
+ * Mirrors AuthResponse.java exactly.
+ */
 export interface AuthResponse {
   readonly token: string;
-  readonly user: User;
+  readonly type: string;
+  readonly userId: string;
+  readonly username: string;
+  readonly cabinetRoles: Record<string, CabinetRole>;
+  readonly activeCabinetId: string | null;
 }
 
 /** Shapes the value held by AuthContext */
@@ -42,6 +71,6 @@ export interface AuthState {
 export interface AuthContextValue extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
-  /** Returns true if the current user has the given role */
-  hasRole: (...roles: UserRole[]) => boolean;
+  /** Returns true if the user is a global admin OR has the given role in at least one cabinet */
+  hasRole: (...roles: CabinetRole[]) => boolean;
 }

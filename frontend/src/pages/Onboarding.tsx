@@ -11,7 +11,7 @@ const Onboarding: React.FC = () => {
     <div style={{ minHeight: '100vh', background: '#0f0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
         <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 28, color: 'white', margin: '0 auto 1.5rem' }}>S</div>
-        <h1 style={{ fontWeight: 800, fontSize: '2rem', marginBottom: '0.75rem' }}>Bienvenue{user?.login ? `, ${user.login}` : ''} 🎉</h1>
+        <h1 style={{ fontWeight: 800, fontSize: '2rem', marginBottom: '0.75rem' }}>Bienvenue{user?.username ? `, ${user.username}` : ''} 🎉</h1>
         <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1.05rem', marginBottom: '2.5rem', lineHeight: 1.7 }}>
           Votre compte est prêt. Configurez votre premier espace de travail pour commencer.
         </p>
