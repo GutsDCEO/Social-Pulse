@@ -1,8 +1,15 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
 export default defineConfig({
     plugins: [react()],
+    resolve: {
+        alias: {
+            // A02 OWASP: path alias keeps imports clean and avoids fragile relative paths
+            '@': path.resolve(__dirname, './src'),
+        },
+    },
     server: {
         port: 5173,
         proxy: {

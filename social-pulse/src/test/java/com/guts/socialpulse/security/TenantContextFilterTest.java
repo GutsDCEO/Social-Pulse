@@ -5,6 +5,7 @@ import com.guts.socialpulse.domain.entity.User;
 import com.guts.socialpulse.domain.enums.CabinetStatus;
 import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.repository.CabinetRepository;
+import com.guts.socialpulse.repository.PostRepository;
 import com.guts.socialpulse.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,8 +51,10 @@ class TenantContextFilterTest {
     @Autowired private MockMvc          mockMvc;
     @Autowired private UserRepository   userRepository;
     @Autowired private CabinetRepository cabinetRepository;
+    @Autowired private PostRepository   postRepository;
     @Autowired private PasswordEncoder  passwordEncoder;
     @Autowired private JwtTokenProvider jwtTokenProvider;
+    @Autowired private com.guts.socialpulse.repository.AuditLogRepository auditLogRepository;
 
     @Value("${app.security.initial-cm-password:cm123}")
     private String cmPassword;
@@ -62,6 +65,8 @@ class TenantContextFilterTest {
 
     @BeforeEach
     void setup() {
+        auditLogRepository.deleteAll();
+        postRepository.deleteAll();
         userRepository.deleteAll();
         cabinetRepository.deleteAll();
 
@@ -143,13 +148,14 @@ class TenantContextFilterTest {
         }
 
         @Test
-        @DisplayName("✅ Request without X-Cabinet-Context passes through (some endpoints are global)")
+        @DisplayName("✅ 200 OK — Request without X-Cabinet-Context falls back to JWT active cabinet")
         void shouldPassThrough_whenNoHeader() throws Exception {
-            // Without the header, TenantContextFilter skips — Spring Security handles auth.
-            // Result is 404 (no cabinet in TenantContext) rather than 403.
+            // Without the header, TenantContextFilter falls back to CLAIM_ACTIVE_CABINET from the JWT.
+            // Result is 200 OK because the CM has an active cabinet set.
             mockMvc.perform(get(CABINETS_ME_URL)
                             .header("Authorization", "Bearer " + cmJwt))
-                    .andExpect(status().is5xxServerError()); // IllegalStateException from service
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(assignedCabinetId.toString()));
         }
     }
 }

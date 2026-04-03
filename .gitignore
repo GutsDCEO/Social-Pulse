@@ -123,3 +123,5 @@ nassima.txt
 .env.example
 social-pulse/test-log.txt
 package-lock.json
+docs/social69pulse-main/
+fix_testcm.sql

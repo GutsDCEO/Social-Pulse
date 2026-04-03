@@ -1,152 +1,185 @@
 // ============================================================
 // src/pages/Login.tsx
-// Premium dark login UI ported from Social-pulse Next.js.
-// A09 OWASP: Generic error message regardless of failure type.
-// A07 OWASP: Rate limit errors from Spring Boot shown as lockout message.
+// Rewired from Lovable: Supabase auth → Social-Pulse AuthContext.
+// CDC: No self-registration. "Contactez-nous" replaces "Sign up".
+// Removed: Google/Apple OAuth, phone sign-in (not in our stack).
 // ============================================================
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import type { LoginCredentials } from '../types/auth';
+import { Eye, EyeOff, Loader2, User } from 'lucide-react';
+import { AuthLayout } from '@/components/layout/AuthLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
-type LocationState = { from?: { pathname: string } };
+// A03 OWASP: Input constraints as named constants, not magic numbers.
+const MAX_USERNAME_LENGTH = 100;
+const MAX_PASSWORD_LENGTH = 128;
 
-const Login: React.FC = () => {
-  const [form, setForm] = useState<LoginCredentials>({ username: '', password: '' });
-  const [showPwd, setShowPwd] = useState(false);
-  const [error, setError]   = useState('');
-  const [loading, setLoading] = useState(false);
+export default function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername]         = useState('');
+  const [password, setPassword]         = useState('');
+  const [isLoading, setIsLoading]       = useState(false);
 
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
-  const from = (location.state as LocationState)?.from?.pathname ?? '/dashboard';
+  const { toast } = useToast();
 
+  const defaultAuthedPath = user?.isAdmin ? '/admin' : '/dashboard';
+
+  // Redirect to intended page (or dashboard) if already authenticated.
+  const from = (location.state as { from?: Location })?.from?.pathname ?? defaultAuthedPath;
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate, from]);
+
+  // A07 OWASP: Rate-limiting enforced server-side; client shows a generic error.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    // A03 OWASP: Fail early — validate at boundary before hitting the network.
+    if (!username.trim() || !password.trim()) return;
 
+    setIsLoading(true);
     try {
-      await login(form);
+      await login({ username: username.trim(), password });
+      toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
       navigate(from, { replace: true });
     } catch {
-      // A09 OWASP: Never surface internal error details to the browser.
-      setError('Identifiants invalides. Veuillez réessayer.');
+      // A09 OWASP: Never expose server details; show a generic message.
+      toast({
+        variant: 'destructive',
+        title: 'Erreur de connexion',
+        description: "Identifiants incorrects. Vérifiez votre nom d'utilisateur et votre mot de passe.",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh', background: '#0f0f1a',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem',
-    }}>
-      <div style={{ width: '100%', maxWidth: 440 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: 20, color: 'white',
-              }}>S</div>
-              <span style={{ fontWeight: 700, fontSize: '1.3rem', color: 'white' }}>
-                Social<span style={{ color: '#a78bfa' }}>Pulse</span>
-                <span style={{ color: '#ec4899', fontSize: '0.7rem' }}>.pro</span>
-              </span>
-            </div>
-          </Link>
-          <h1 style={{ color: 'white', fontWeight: 800, fontSize: '1.6rem', marginTop: '1.5rem', marginBottom: '0.5rem' }}>
-            Bon retour !
+    <AuthLayout tagline="Connectez-vous à votre espace SocialPulse.">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-primary">
+            Se connecter
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>
-            Connectez-vous à votre espace SocialPulse
+          <p className="text-muted-foreground">
+            Entrez vos identifiants pour accéder à votre espace.
           </p>
         </div>
 
-        <div className="card">
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Login field */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>
-                Identifiant
-              </label>
-              <input
-                id="login"
-                className="input"
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {/* Username */}
+          <div className="space-y-2">
+            <Label htmlFor="login-username" className="sr-only">
+              Nom d'utilisateur
+            </Label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                id="login-username"
                 type="text"
-                placeholder="Votre identifiant"
-                value={form.username}
-                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                placeholder="Nom d'utilisateur"
+                value={username}
+                onChange={e => setUsername(e.target.value.slice(0, MAX_USERNAME_LENGTH))}
+                className="h-12 pl-12 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
                 required
-                autoFocus
+                disabled={isLoading}
                 autoComplete="username"
+                autoFocus
               />
             </div>
+          </div>
 
-            {/* Password field */}
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)' }}>
-                Mot de passe
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  id="password"
-                  className="input"
-                  type={showPwd ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  required
-                  autoComplete="current-password"
-                  style={{ paddingRight: '3rem' }}
-                />
-                <button
-                  type="button"
-                  aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  onClick={() => setShowPwd((v) => !v)}
-                  style={{
-                    position: 'absolute', right: '0.75rem', top: '50%',
-                    transform: 'translateY(-50%)', background: 'none',
-                    border: 'none', cursor: 'pointer',
-                    color: 'rgba(255,255,255,0.4)', display: 'flex',
-                  }}
-                >
-                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+          {/* Password */}
+          <div className="space-y-2">
+            <Label htmlFor="login-password" className="sr-only">
+              Mot de passe
+            </Label>
+            <div className="relative">
+              <Input
+                id="login-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Mot de passe"
+                value={password}
+                onChange={e => setPassword(e.target.value.slice(0, MAX_PASSWORD_LENGTH))}
+                className="h-12 bg-muted/50 border-0 pr-12 focus-visible:ring-1 focus-visible:ring-primary"
+                required
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
+          </div>
 
-            {/* Error message */}
-            {error && <div className="alert-error">{error}</div>}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-              style={{ justifyContent: 'center', marginTop: '0.5rem' }}
+          {/* Forgot password */}
+          <div className="flex justify-end">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary hover:underline"
             >
-              {loading ? 'Connexion...' : <><span>Se connecter</span><ArrowRight size={18} /></>}
-            </button>
-          </form>
-
-          <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)' }}>
-            Pas encore de compte ?{' '}
-            <Link to="/register" style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}>
-              S&apos;inscrire
+              Mot de passe oublié ?
             </Link>
+          </div>
+
+          {/* Submit */}
+          <Button
+            id="login-submit"
+            type="submit"
+            className="w-full h-12 font-semibold uppercase tracking-wide"
+            disabled={isLoading || !username.trim() || !password.trim()}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connexion en cours…
+              </>
+            ) : (
+              'Connexion'
+            )}
+          </Button>
+        </form>
+
+        {/* CDC compliance footer — no self-registration */}
+        <div className="text-center text-sm text-muted-foreground space-y-1">
+          <p>
+            Pas encore de compte ?{' '}
+            <a
+              href="mailto:contact@socialpulse.fr"
+              className="text-primary font-medium hover:underline"
+            >
+              Contactez-nous
+            </a>
+          </p>
+          <p className="text-xs">
+            Les comptes sont créés par l'administrateur SocialPulse.
           </p>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
-};
-
-export default Login;
+}

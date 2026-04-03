@@ -1,0 +1,35 @@
+graph LR
+    subgraph Phase1["SPRINT 1 - Fil d Acier (30 mars - 10 avril)"]
+        direction TB
+        S1A["Je me connecte a la plateforme"]
+        S1B["Je vois une sidebar adaptee a mon role"]
+        S1C["Je selectionne mon cabinet"]
+        S1D["Je cree un brouillon de post"]
+        S1E["Je soumets le post pour validation"]
+        S1F["L avocat valide ou refuse"]
+        S1A --> S1B --> S1C --> S1D --> S1E --> S1F
+    end
+
+    subgraph Phase2["SPRINT 2 - Workflow Pro (13-24 avril)"]
+        direction TB
+        S2A["Je formate avec un editeur riche"]
+        S2B["Je glisse-depose des medias"]
+        S2C["Je planifie la date de publication"]
+        S2D["Je previsualise par reseau social"]
+        S2E["L Admin gere utilisateurs et cabinets"]
+        S2F["Je consulte le journal d audit"]
+        S2A --> S2B --> S2C --> S2D --> S2E --> S2F
+    end
+
+    subgraph Phase3["SPRINT 3 - Lancement (27 avril - 8 mai)"]
+        direction TB
+        S3A["Je me connecte via Google"]
+        S3B["L Admin simule la vue d un autre role"]
+        S3C["Le systeme bloque les attaques brute force"]
+        S3D["Le systeme publie automatiquement"]
+        S3E["Tests E2E des parcours critiques"]
+        S3F["Pipeline CI/CD et deploiement Docker"]
+        S3A --> S3B --> S3C --> S3D --> S3E --> S3F
+    end
+
+    Phase1 --> Phase2 --> Phase3

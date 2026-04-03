@@ -2,22 +2,23 @@ package com.guts.socialpulse.service.impl;
 
 import com.guts.socialpulse.domain.entity.Cabinet;
 import com.guts.socialpulse.domain.enums.CabinetStatus;
+import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.dto.CabinetDTO;
 import com.guts.socialpulse.dto.CreateCabinetRequest;
 import com.guts.socialpulse.exception.CabinetNotFoundException;
 import com.guts.socialpulse.exception.DuplicateResourceException;
 import com.guts.socialpulse.repository.CabinetRepository;
-import com.guts.socialpulse.repository.UserRepository;
 import com.guts.socialpulse.repository.UserCabinetRepository;
+import com.guts.socialpulse.repository.UserRepository;
 import com.guts.socialpulse.domain.entity.User;
 import com.guts.socialpulse.domain.entity.UserCabinet;
-import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.security.TenantContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import com.guts.socialpulse.service.AuthService;
 import com.guts.socialpulse.service.CabinetService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,11 +46,35 @@ public class CabinetServiceImpl implements CabinetService {
 
     private static final String SPECIALIZATION_DELIMITER = ",";
 
-    private final CabinetRepository cabinetRepository;
-    private final UserRepository userRepository;
+    // SOLID-D: Depend on the AuthService abstraction (not concrete class)
+    // so CabinetServiceImpl can be tested independently via a mock.
+    private final CabinetRepository     cabinetRepository;
+    private final UserRepository        userRepository;
     private final UserCabinetRepository userCabinetRepository;
+    private final AuthService           authService;
 
     // ── Create ────────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CabinetDTO> getCabinetsForUser(String username, boolean isSuperAdmin) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+        if (isSuperAdmin) {
+            return cabinetRepository.findAll().stream()
+                    .map(this::mapToDTO)
+                    .toList();
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        return userCabinetRepository.findByUserId(user.getId()).stream()
+                .map(UserCabinet::getCabinet)
+                .map(this::mapToDTO)
+                .toList();
+    }
 
     @Override
     @Transactional
@@ -94,6 +119,39 @@ public class CabinetServiceImpl implements CabinetService {
         return mapToDTO(saved);
     }
 
+    // ── Assign ────────────────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public String assignUserToCabinet(UUID cabinetId, UUID userId, Role role) {
+        if (role == Role.ADMIN) {
+            throw new IllegalArgumentException(
+                    "Cannot assign ADMIN role via this endpoint. Use the is_admin flag for Super Admins.");
+        }
+
+        Cabinet cabinet = cabinetRepository.findById(cabinetId)
+                .orElseThrow(() -> new CabinetNotFoundException(cabinetId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        // Fail early: prevent duplicate assignments (unique constraint on user_id + cabinet_id)
+        boolean alreadyAssigned = userCabinetRepository.existsByUserAndCabinet(user, cabinet);
+        if (alreadyAssigned) {
+            throw new DuplicateResourceException(
+                    "User '" + user.getUsername() + "' is already assigned to cabinet '" + cabinet.getName() + "'");
+        }
+
+        user.addCabinetRole(cabinet, role);
+        userRepository.save(user);
+        log.info("CabinetService: Assigned user '{}' as {} of cabinet '{}'",
+                user.getUsername(), role, cabinet.getName());
+
+        // Return a refreshed token reflecting the new cabinet role.
+        // The controller will emit this as the X-Refreshed-Token response header.
+        return authService.refreshTokenForUser(user.getUsername());
+    }
+
     // ── Read ──────────────────────────────────────────────────────────────────
 
     @Override
@@ -112,6 +170,54 @@ public class CabinetServiceImpl implements CabinetService {
                 .orElseThrow(() -> new CabinetNotFoundException(cabinetId));
 
         return mapToDTO(cabinet);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CabinetDTO getCabinetById(UUID id) {
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + currentUsername));
+        
+        Cabinet cabinet = cabinetRepository.findById(id)
+                .orElseThrow(() -> new CabinetNotFoundException(id));
+                
+        // Validation: Ensure the user belongs to the requested cabinet (unless super admin).
+        if (!user.isAdmin() && !userCabinetRepository.existsByUserAndCabinet(user, cabinet)) {
+            throw new IllegalArgumentException("User does not have access to this cabinet");
+        }
+        
+        return mapToDTO(cabinet);
+    }
+
+    @Override
+    @Transactional
+    public CabinetDTO updateCabinet(UUID id, com.guts.socialpulse.dto.UpdateCabinetRequest request) {
+        Cabinet cabinet = cabinetRepository.findById(id)
+                .orElseThrow(() -> new CabinetNotFoundException(id));
+                
+        // Check email uniqueness if email is changed
+        if (request.getEmail() != null && !request.getEmail().equals(cabinet.getEmail()) 
+            && cabinetRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException(
+                    "A cabinet with email '" + request.getEmail() + "' already exists");
+        }
+
+        cabinet.setName(request.getName());
+        cabinet.setBarreau(request.getBarreau());
+        cabinet.setEmail(request.getEmail());
+        cabinet.setPhone(request.getPhone());
+        cabinet.setAddress(request.getAddress());
+        cabinet.setCity(request.getCity());
+        cabinet.setPostalCode(request.getPostalCode());
+        cabinet.setWebsite(request.getWebsite());
+        cabinet.setPack(request.getPack());
+        cabinet.setStatus(request.getStatus());
+        cabinet.setSpecializations(joinSpecializations(request.getSpecializations()));
+
+        Cabinet saved = cabinetRepository.save(cabinet);
+        log.info("CabinetService: Updated cabinet id='{}'", saved.getId());
+        return mapToDTO(saved);
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -135,6 +241,8 @@ public class CabinetServiceImpl implements CabinetService {
                 .website(cabinet.getWebsite())
                 .pack(cabinet.getPack())
                 .status(cabinet.getStatus())
+                .paymentStatus(cabinet.getPaymentStatus())
+                .riskScore(cabinet.getRiskScore())
                 .specializations(splitSpecializations(cabinet.getSpecializations()))
                 .createdAt(cabinet.getCreatedAt())
                 .updatedAt(cabinet.getUpdatedAt())

@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> Brouillon : Le CM cree un post
+    Brouillon --> EnAttenteAvocat : Le CM soumet directement
+    Brouillon --> RevueCM : Contenu genere par IA
+
+    RevueCM --> EnAttenteAvocat : Le CM approuve et envoie
+    RevueCM --> Rejete : Le CM rejette (contenu IA inadapte)
+
+    EnAttenteAvocat --> Approuve : L avocat valide
+    EnAttenteAvocat --> Rejete : L avocat refuse
+    EnAttenteAvocat --> RevueCM : L avocat demande une modification
+    EnAttenteAvocat --> RevueCM : L avocat decline avec motif
+
+    Approuve --> Planifie : Post avec date future
+    Approuve --> Publie : Post sans date (immediat)
+
+    Planifie --> Publie : Le systeme publie a la date prevue
+    Planifie --> Erreur : Echec de publication
+
+    Erreur --> Planifie : Retry automatique (max 3 tentatives)
+    Erreur --> [*] : Abandon apres 3 echecs
+
+    Publie --> [*] : Publication reussie
+    Rejete --> [*] : Post abandonne

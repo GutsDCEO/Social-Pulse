@@ -1,0 +1,63 @@
+gantt
+    title SocialPulse - Planning par User Stories
+    dateFormat YYYY-MM-DD
+    axisFormat %d %b
+    todayMarker stroke-width:3px,stroke:#ff0000
+
+    section Conception
+    Redaction CDC et definition des roles           :done, c1, 2026-03-23, 2d
+    Maquettes UI et architecture                    :done, c2, 2026-03-25, 2d
+    Planification Agile et backlog                  :done, c3, 2026-03-27, 1d
+
+    section Authentification
+    En tant qu utilisateur je me connecte par email  :done, us1, 2026-03-30, 3d
+    En tant qu utilisateur je vois la page de login  :done, us2, 2026-04-01, 2d
+    En tant qu utilisateur non connecte je suis redirige vers login :done, us3, 2026-04-03, 1d
+    En tant qu utilisateur je me connecte via Google :us14, 2026-04-27, 2d
+
+    section Multi-Tenancy
+    En tant que systeme je bloque l acces aux cabinets non autorises :done, us4, 2026-04-03, 1d
+    En tant qu Admin je cree et consulte les cabinets :done, us5, 2026-04-06, 2d
+    En tant qu utilisateur je vois une sidebar adaptee a mon role :done, us6, 2026-04-03, 2d
+
+    section Espace CM
+    En tant que CM je bascule entre mes cabinets    :active, us7, 2026-04-07, 2d
+    En tant que CM je cree un brouillon de post     :active, us8, 2026-04-08, 1d
+    En tant que CM je vois les posts a valider avant envoi :us9, 2026-04-09, 2d
+    En tant que CM je change de cabinet via la TopBar :us18, 2026-04-15, 1d
+
+    section Validation Avocat
+    En tant qu avocat je valide ou refuse un post    :us10, 2026-04-09, 2d
+    En tant qu avocat je vois les communications en attente :us11, 2026-04-09, 2d
+    En tant qu avocat je vois le calendrier editorial :us19, 2026-04-23, 2d
+
+    section Editeur Enrichi
+    En tant que CM je formate mon contenu avec un editeur riche :us12, 2026-04-13, 2d
+    En tant que CM je glisse-depose des medias (5 Mo max) :us13, 2026-04-16, 2d
+    En tant que CM je planifie la publication a une date future :us20, 2026-04-15, 2d
+    En tant que CM je previsualise un post par reseau social :us21, 2026-04-17, 2d
+
+    section Administration
+    En tant qu Admin je vois le dashboard avec KPIs  :us15, 2026-04-13, 3d
+    En tant qu Admin je gere les utilisateurs (CRUD) :us16, 2026-04-17, 4d
+    En tant qu Admin je gere les cabinets (CRUD)     :us17, 2026-04-17, 3d
+    En tant qu Admin je consulte le journal d audit   :us22, 2026-04-20, 2d
+
+    section Securite et Conformite
+    En tant qu Admin je simule la vue CM ou Avocat en lecture seule :us23, 2026-04-29, 2d
+    En tant que systeme je bloque apres 5 tentatives echouees :us24, 2026-04-27, 2d
+    En tant qu Admin je supprime un utilisateur (RGPD) :us25, 2026-05-04, 2d
+
+    section Publication et Deploiement
+    En tant que systeme je publie automatiquement les posts planifies :us26, 2026-05-04, 2d
+    En tant que systeme je retente en cas d erreur (max 3) :us27, 2026-05-06, 1d
+    En tant que developpeur je consulte la doc API Swagger :us28, 2026-05-06, 1d
+    Pipeline CI/CD et Docker                         :us29, 2026-05-06, 2d
+
+    section Tests
+    Tests E2E des parcours critiques                 :us30, 2026-04-29, 4d
+
+    section Jalons
+    Demo Fil d Acier (boucle complete)               :milestone, m1, 2026-04-10, 0d
+    Demo Workflow Professionnel                      :milestone, m2, 2026-04-24, 0d
+    Livraison Finale                                 :milestone, m3, 2026-05-08, 0d

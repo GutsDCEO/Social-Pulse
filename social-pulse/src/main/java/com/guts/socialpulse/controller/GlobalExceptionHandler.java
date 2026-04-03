@@ -91,11 +91,27 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 
+    /** 400 Bad Request — service layer validation failures */
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(RuntimeException ex) {
+        log.warn("Invalid operation: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     /** 500 Internal Server Error — unexpected runtime exceptions */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    }
+
+    /** 4xx/5xx thrown intentionally by controllers/services via ResponseStatusException */
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        String message = ex.getReason() != null ? ex.getReason() : "Request failed";
+        log.warn("ResponseStatusException {}: {}", status.value(), message);
+        return buildResponse(status, message);
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────

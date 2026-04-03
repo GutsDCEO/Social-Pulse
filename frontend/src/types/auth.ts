@@ -5,10 +5,10 @@
 // ============================================================
 
 /**
- * Cabinet-scoped role string, mirrors the CabinetRole enum on the backend.
+ * Cabinet-scoped role string, mirrors the Role enum on the backend.
  * A user may have different roles in different cabinets.
  */
-export type CabinetRole = 'CABINET_ADMIN' | 'MEMBER';
+export type CabinetRole = 'ADMIN' | 'CM' | 'AVOCAT';
 
 /**
  * Mirrors the backend User entity fields as returned inside AuthResponse.
@@ -73,4 +73,8 @@ export interface AuthContextValue extends AuthState {
   logout: () => void;
   /** Returns true if the user is a global admin OR has the given role in at least one cabinet */
   hasRole: (...roles: CabinetRole[]) => boolean;
+  /**
+   * Sets active cabinet context (JWT + X-Cabinet-Context). Server validates membership.
+   */
+  switchActiveCabinet: (cabinetId: string) => Promise<void>;
 }

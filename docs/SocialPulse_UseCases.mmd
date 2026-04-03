@@ -1,0 +1,90 @@
+graph TB
+    subgraph Acteurs
+        Admin["Admin SocialPulse"]
+        CM["Community Manager"]
+        Avocat["Avocat"]
+        Systeme["Systeme"]
+    end
+
+    subgraph UC_Auth["Authentification"]
+        UC1["Se connecter par email/mot de passe"]
+        UC2["Se connecter via Google OAuth2"]
+        UC3["Etre redirige vers login si non connecte"]
+        UC4["Etre bloque apres 5 tentatives"]
+    end
+
+    subgraph UC_CM["Espace Community Manager"]
+        UC5["Voir la liste de mes cabinets"]
+        UC6["Basculer entre mes cabinets"]
+        UC7["Creer un brouillon de post"]
+        UC8["Formater le contenu (editeur riche)"]
+        UC9["Glisser-deposer des medias"]
+        UC10["Planifier une publication"]
+        UC11["Soumettre un post pour validation"]
+        UC12["Verifier les posts IA avant envoi"]
+        UC13["Previsualiser un post par reseau"]
+    end
+
+    subgraph UC_Avocat["Espace Avocat"]
+        UC14["Voir les communications en attente"]
+        UC15["Valider un post"]
+        UC16["Refuser un post"]
+        UC17["Demander une modification"]
+        UC18["Decliner avec motif"]
+        UC19["Consulter le calendrier editorial"]
+        UC20["Contacter mon CM via le hub support"]
+    end
+
+    subgraph UC_Admin["Administration"]
+        UC21["Voir le dashboard KPIs"]
+        UC22["Gerer les utilisateurs (CRUD)"]
+        UC23["Gerer les cabinets (CRUD)"]
+        UC24["Consulter le journal d audit"]
+        UC25["Simuler la vue d un autre role"]
+        UC26["Supprimer un utilisateur (RGPD)"]
+    end
+
+    subgraph UC_Systeme["Automatisation"]
+        UC27["Publier les posts planifies"]
+        UC28["Retenter en cas d erreur (3 max)"]
+        UC29["Isoler les donnees par cabinet"]
+        UC30["Auditer chaque changement d etat"]
+    end
+
+    Admin --> UC1
+    Admin --> UC2
+    Admin --> UC21
+    Admin --> UC22
+    Admin --> UC23
+    Admin --> UC24
+    Admin --> UC25
+    Admin --> UC26
+
+    CM --> UC1
+    CM --> UC2
+    CM --> UC5
+    CM --> UC6
+    CM --> UC7
+    CM --> UC8
+    CM --> UC9
+    CM --> UC10
+    CM --> UC11
+    CM --> UC12
+    CM --> UC13
+
+    Avocat --> UC1
+    Avocat --> UC2
+    Avocat --> UC14
+    Avocat --> UC15
+    Avocat --> UC16
+    Avocat --> UC17
+    Avocat --> UC18
+    Avocat --> UC19
+    Avocat --> UC20
+
+    Systeme --> UC3
+    Systeme --> UC4
+    Systeme --> UC27
+    Systeme --> UC28
+    Systeme --> UC29
+    Systeme --> UC30

@@ -1,0 +1,9 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top blue circle with bite -->
+  <path d="M40 0C51.046 0 60 8.954 60 20C60 31.046 51.046 40 40 40C28.954 40 20 31.046 20 20C20 8.954 28.954 0 40 0Z" fill="#4F46E5"/>
+  <path d="M40 20C40 31.046 31.046 40 20 40C20 28.954 28.954 20 40 20Z" fill="white"/>
+  
+  <!-- Bottom pink circle with bite -->
+  <path d="M40 40C51.046 40 60 48.954 60 60C60 71.046 51.046 80 40 80C28.954 80 20 71.046 20 60C20 48.954 28.954 40 40 40Z" fill="#EC4899"/>
+  <path d="M40 60C40 48.954 48.954 40 60 40C60 51.046 51.046 60 40 60Z" fill="white"/>
+</svg>
