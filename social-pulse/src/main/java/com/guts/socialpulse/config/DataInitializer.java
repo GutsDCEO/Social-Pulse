@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
-@Profile("dev")
+@Profile("seed-data") // Changed from "dev" so it does NOT run automatically. Run with this profile if you explicitly want the seeded data.
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 

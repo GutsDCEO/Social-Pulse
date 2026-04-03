@@ -18,11 +18,25 @@ const api: AxiosInstance = axios.create({
 // ─── Request interceptor ────────────────────────────────────
 // Attach JWT Bearer token from sessionStorage on every request.
 // A02 OWASP: sessionStorage > localStorage (cleared on tab close).
+// Multi-tenancy: X-Cabinet-Context is REQUIRED by the backend for tenant isolation.
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = sessionStorage.getItem('sp_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // A01 OWASP: Always send active cabinet context so the backend can enforce
+    // tenant boundaries on every request. Never trust the client to filter.
+    const rawUser = sessionStorage.getItem('sp_user');
+    if (rawUser) {
+      try {
+        const user = JSON.parse(rawUser) as { activeCabinetId?: string | null };
+        if (user?.activeCabinetId) {
+          config.headers['X-Cabinet-Context'] = user.activeCabinetId;
+        }
+      } catch {
+        // Corrupted storage — omit header; backend will reject if required (A09 OWASP)
+      }
     }
     return config;
   },
@@ -36,9 +50,14 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      sessionStorage.removeItem('sp_token');
-      sessionStorage.removeItem('sp_user');
-      window.location.href = '/login';
+      // Don't trigger a hard redirect if the 401 comes from the login endpoint itself!
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      
+      if (!isLoginRequest) {
+        sessionStorage.removeItem('sp_token');
+        sessionStorage.removeItem('sp_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   },

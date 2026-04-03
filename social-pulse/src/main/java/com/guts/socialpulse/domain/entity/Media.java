@@ -2,10 +2,12 @@ package com.guts.socialpulse.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import java.util.UUID;
 
 @Entity
 @Table(name = "media")
+@Filter(name = "cabinetFilter", condition = "cabinet_id = :cabinetId")
 @Getter
 @Setter
 @NoArgsConstructor

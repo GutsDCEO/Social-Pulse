@@ -1,6 +1,7 @@
 package com.guts.socialpulse.dto;
 
 import com.guts.socialpulse.domain.enums.CabinetStatus;
+import com.guts.socialpulse.domain.enums.PaymentStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -32,6 +33,8 @@ public class CabinetDTO {
     private final String        website;
     private final String        pack;
     private final CabinetStatus status;
+    private final PaymentStatus paymentStatus;
+    private final Integer       riskScore;
 
     /**
      * Legal specializations (e.g., "Droit de la famille", "Droit fiscal").

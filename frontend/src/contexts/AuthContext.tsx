@@ -6,10 +6,30 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import * as authService from '../services/authService';
+import { switchCabinet as switchCabinetRequest } from '../services/cabinetService';
 import type { User, CabinetRole, LoginCredentials, AuthContextValue } from '../types/auth';
 
 // ─── Context ────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = decodeURIComponent(
+      atob(padded)
+        .split('')
+        .map((c) => `%${c.charCodeAt(0).toString(16).padStart(2, '0')}`)
+        .join(''),
+    );
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Helper: build a User object from the flat AuthResponse fields ─
 function buildUser(
@@ -53,14 +73,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = useCallback(async (credentials: LoginCredentials): Promise<void> => {
     // A09 OWASP: rethrow without exposing server details — UI shows a generic message.
     const response = await authService.login(credentials);
+    const claims = decodeJwtPayload(response.token);
+    const isAdmin = claims?.isAdmin === true;
 
     const newUser = buildUser(
       response.userId,
       response.username,
       response.cabinetRoles,
       response.activeCabinetId,
-      // isAdmin is not in AuthResponse; default false — protected routes use hasRole()
-      false,
+      isAdmin,
     );
 
     setToken(response.token);
@@ -89,6 +110,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return Object.values(user.cabinetRoles).some((r) => roles.includes(r));
   }, [user]);
 
+  const switchActiveCabinet = useCallback(
+    async (cabinetId: string): Promise<void> => {
+      if (!user) return;
+      const trimmed = cabinetId.trim();
+      if (!trimmed || !(trimmed in user.cabinetRoles)) {
+        throw new Error('Cabinet non autorisé');
+      }
+      const { token: newToken } = await switchCabinetRequest(trimmed);
+      const claims = decodeJwtPayload(newToken);
+      const isAdmin = claims?.isAdmin === true;
+      const updated = { ...user, activeCabinetId: trimmed, isAdmin };
+      setToken(newToken);
+      setUser(updated);
+      sessionStorage.setItem('sp_token', newToken);
+      sessionStorage.setItem('sp_user', JSON.stringify(updated));
+    },
+    [user],
+  );
+
   const value: AuthContextValue = {
     user,
     token,
@@ -97,6 +137,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     logout,
     hasRole,
+    switchActiveCabinet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,7 @@
 // ============================================================
 // src/types/api.ts
 // Shared API response shapes. Every service returns these types.
+// Aligned with backend AdminStatsDTO and Page types.
 // ============================================================
 
 export interface ApiError {
@@ -9,28 +10,33 @@ export interface ApiError {
   readonly code?: string;
 }
 
+/** Standard Spring Data Page structure */
 export interface PaginatedResponse<T> {
-  readonly data: T[];
-  readonly total: number;
-  readonly page: number;
-  readonly pageSize: number;
+  readonly content: T[];
+  readonly totalElements: number;
+  readonly totalPages: number;
+  readonly size: number;
+  readonly number: number;
+  readonly numberOfElements: number;
+  readonly first: boolean;
+  readonly last: boolean;
+  readonly empty: boolean;
 }
 
-export interface DashboardStats {
-  readonly modules_total: number;
-  readonly modules_planifies: number;
-  readonly creneaux_planifies: number;
-  readonly volume_horaire_total: number;
-  readonly volume_horaire_planifie: number;
-  readonly heures_restantes: number;
-  readonly taux_completion: number;
+/** 
+ * Platform KPIs for Admin Dashboard. 
+ * Mirrors AdminStatsDTO.java.
+ */
+export interface AdminStatsDTO {
+  readonly totalUsers: number;
+  readonly activeCabinets: number;
+  readonly postsThisWeek: number;
+  readonly pendingValidations: number;
+  readonly mrrCurrent: number;
+  readonly avgValidationTimeHours: number;
 }
 
-export interface StatsResponse {
-  readonly stats: DashboardStats;
-}
-
-// Generic API success wrapper
+/** Generic success wrapper */
 export interface ApiResponse<T> {
   readonly data: T;
   readonly success: boolean;

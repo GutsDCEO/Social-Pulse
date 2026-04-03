@@ -1,22 +1,54 @@
-// src/pages/Media.tsx
-import React from 'react';
-import { Image, Upload } from 'lucide-react';
-const Media: React.FC = () => (
-  <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ width: 40, height: 40, borderRadius: '0.75rem', background: 'rgba(6,182,212,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Image size={20} style={{ color: '#06b6d4' }} /></div>
-        <div><h1 style={{ fontWeight: 800, fontSize: '1.5rem' }}>Médias</h1><p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Bibliothèque de fichiers</p></div>
+// src/pages/Media.tsx — Media library (REST-wired upload)
+import { useRef } from 'react';
+import { uploadMedia } from '@/services/mediaService';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Upload, Image as ImageIcon } from 'lucide-react';
+
+export default function Media() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    for (const file of Array.from(files)) {
+      try {
+        await uploadMedia(file);
+        toast({ title: `${file.name} uploadé` });
+      } catch {
+        toast({ variant: 'destructive', title: `Erreur upload: ${file.name}` });
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <ImageIcon className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-bold">Médiathèque</h1>
       </div>
-      <button className="btn-primary"><Upload size={16} /> Importer</button>
+      <Card
+        className="border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer"
+        onClick={() => inputRef.current?.click()}
+      >
+        <CardContent className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+          <Upload className="h-10 w-10" />
+          <p className="font-medium">Cliquez ou glissez un fichier pour l'uploader</p>
+          <p className="text-xs">Images, vidéos (max 50 Mo)</p>
+        </CardContent>
+      </Card>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/*,video/*"
+        className="hidden"
+        onChange={e => handleFiles(e.target.files)}
+      />
+      <Button variant="outline" onClick={() => inputRef.current?.click()}>
+        <Upload className="h-4 w-4 mr-2" />Uploader un fichier
+      </Button>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px,1fr))', gap: '1rem' }}>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="card-hover" style={{ aspectRatio: '1', background: `hsl(${(i * 37 + 260) % 360},40%,12%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Image size={32} style={{ color: 'rgba(255,255,255,0.15)' }} />
-        </div>
-      ))}
-    </div>
-  </div>
-);
-export default Media;
+  );
+}

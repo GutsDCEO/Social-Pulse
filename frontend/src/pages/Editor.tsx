@@ -1,61 +1,138 @@
+// ============================================================
 // src/pages/Editor.tsx
-import React, { useState } from 'react';
-import { FileEdit, Send, Image, Hash } from 'lucide-react';
+// Rewired: create/edit posts via REST API.
+// ============================================================
 
-const Editor: React.FC = () => {
+import { useState, type ElementType } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createPost } from '@/services/postService';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import type { SocialNetwork } from '@/types/post';
+import { Loader2, Send, Save } from 'lucide-react';
+import { Linkedin, Instagram, Facebook, Twitter } from '@/lib/brand-icons';
+
+const NETWORKS: { id: SocialNetwork; label: string; Icon: ElementType; color: string }[] = [
+  { id: 'LINKEDIN',  label: 'LinkedIn',  Icon: Linkedin,  color: 'text-[#0077B5]' },
+  { id: 'FACEBOOK',  label: 'Facebook',  Icon: Facebook,  color: 'text-[#1877F2]' },
+  { id: 'INSTAGRAM', label: 'Instagram', Icon: Instagram, color: 'text-[#E1306C]' },
+  { id: 'TWITTER',   label: 'Twitter',   Icon: Twitter,   color: 'text-[#1DA1F2]' },
+];
+
+const MAX_CONTENT = 3000;
+
+export default function Editor() {
   const [content, setContent] = useState('');
-  const PLATFORMS = ['Instagram', 'LinkedIn', 'Facebook', 'TikTok', 'Twitter'];
-  const [selected, setSelected] = useState<string[]>([]);
-  const toggle = (p: string) => setSelected((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]);
+  const [networks, setNetworks] = useState<SocialNetwork[]>([]);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const toggleNetwork = (id: SocialNetwork) =>
+    setNetworks(prev => prev.includes(id) ? prev.filter(n => n !== id) : [...prev, id]);
+
+  const mutSave = useMutation({
+    mutationFn: () => createPost({ content, targetNetworks: networks, status: 'DRAFT' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      toast({ title: 'Brouillon sauvegardé' });
+      navigate('/dashboard/validate');
+    },
+    onError: () => toast({ variant: 'destructive', title: 'Erreur lors de la sauvegarde' }),
+  });
+
+  const mutSubmit = useMutation({
+    mutationFn: () => createPost({ content, targetNetworks: networks, status: 'PENDING_CM' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      toast({ title: 'Publication soumise pour validation' });
+      navigate('/dashboard/validate');
+    },
+    onError: () => toast({ variant: 'destructive', title: 'Erreur lors de la soumission' }),
+  });
+
+  const isWorking = mutSave.isPending || mutSubmit.isPending;
+  const canSubmit = content.trim().length > 0 && networks.length > 0;
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-        <div style={{ width: 40, height: 40, borderRadius: '0.75rem', background: 'rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <FileEdit size={20} style={{ color: '#7c3aed' }} />
-        </div>
-        <div>
-          <h1 style={{ fontWeight: 800, fontSize: '1.5rem' }}>Éditeur de Post</h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Créez et planifiez vos publications</p>
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">Nouvelle publication</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem' }}>
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <textarea
-            placeholder="Rédigez votre publication..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', fontSize: '1rem', minHeight: 200, resize: 'none', lineHeight: 1.6 }}
-          />
-          <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}><Image size={16} /> Ajouter un média</button>
-            <button className="btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}><Hash size={16} /> Hashtags IA</button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Réseaux cibles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            {NETWORKS.map(({ id, label, Icon, color }) => (
+              <label key={id} className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  id={`net-${id}`}
+                  checked={networks.includes(id)}
+                  onCheckedChange={() => toggleNetwork(id)}
+                  disabled={isWorking}
+                />
+                <Icon className={`h-4 w-4 ${color}`} />
+                <span className="text-sm">{label}</span>
+              </label>
+            ))}
           </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="card">
-            <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>RÉSEAUX</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {PLATFORMS.map((p) => (
-                <button key={p} onClick={() => toggle(p)} style={{
-                  padding: '0.6rem 1rem', borderRadius: '0.5rem', border: '1px solid',
-                  borderColor: selected.includes(p) ? '#7c3aed' : 'rgba(255,255,255,0.1)',
-                  background: selected.includes(p) ? 'rgba(124,58,237,0.15)' : 'transparent',
-                  color: selected.includes(p) ? '#a78bfa' : 'rgba(255,255,255,0.6)',
-                  cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
-                }}>{p}</button>
+          {networks.length > 0 && (
+            <div className="flex gap-1 mt-3 flex-wrap">
+              {networks.map(n => (
+                <Badge key={n} variant="secondary" className="text-xs">{n}</Badge>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Contenu</CardTitle>
+            <span className={`text-xs ${content.length > MAX_CONTENT * 0.9 ? 'text-sp-warning' : 'text-muted-foreground'}`}>
+              {content.length}/{MAX_CONTENT}
+            </span>
           </div>
-          <button className="btn-primary" style={{ justifyContent: 'center' }} disabled={!content || selected.length === 0}>
-            <Send size={16} /> Publier maintenant
-          </button>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="post-content" className="sr-only">Contenu de la publication</Label>
+          <Textarea
+            id="post-content"
+            placeholder="Rédigez votre publication…"
+            value={content}
+            onChange={e => setContent(e.target.value.slice(0, MAX_CONTENT))}
+            rows={10}
+            disabled={isWorking}
+            className="resize-none"
+          />
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-3 justify-end">
+        <Button
+          variant="outline"
+          onClick={() => mutSave.mutate()}
+          disabled={!content.trim() || isWorking}
+        >
+          {mutSave.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+          Enregistrer brouillon
+        </Button>
+        <Button
+          onClick={() => mutSubmit.mutate()}
+          disabled={!canSubmit || isWorking}
+        >
+          {mutSubmit.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+          Soumettre
+        </Button>
       </div>
     </div>
   );
-};
-
-export default Editor;
+}

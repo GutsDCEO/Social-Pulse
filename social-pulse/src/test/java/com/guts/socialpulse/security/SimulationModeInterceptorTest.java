@@ -7,6 +7,7 @@ import com.guts.socialpulse.domain.enums.CabinetStatus;
 import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.dto.CreateCabinetRequest;
 import com.guts.socialpulse.repository.CabinetRepository;
+import com.guts.socialpulse.repository.PostRepository;
 import com.guts.socialpulse.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,9 +55,11 @@ class SimulationModeInterceptorTest {
     @Autowired private MockMvc          mockMvc;
     @Autowired private UserRepository   userRepository;
     @Autowired private CabinetRepository cabinetRepository;
+    @Autowired private PostRepository   postRepository;
     @Autowired private PasswordEncoder  passwordEncoder;
     @Autowired private JwtTokenProvider jwtTokenProvider;
     @Autowired private ObjectMapper     objectMapper;
+    @Autowired private com.guts.socialpulse.repository.AuditLogRepository auditLogRepository;
 
     @Value("${app.security.initial-admin-password:admin123}")
     private String adminPassword;
@@ -67,6 +70,8 @@ class SimulationModeInterceptorTest {
 
     @BeforeEach
     void setup() {
+        auditLogRepository.deleteAll();
+        postRepository.deleteAll();
         userRepository.deleteAll();
         cabinetRepository.deleteAll();
 

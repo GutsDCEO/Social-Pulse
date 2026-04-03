@@ -7,6 +7,7 @@ import com.guts.socialpulse.domain.enums.CabinetStatus;
 import com.guts.socialpulse.domain.enums.Role;
 import com.guts.socialpulse.dto.CreateCabinetRequest;
 import com.guts.socialpulse.repository.CabinetRepository;
+import com.guts.socialpulse.repository.PostRepository;
 import com.guts.socialpulse.repository.UserRepository;
 import com.guts.socialpulse.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,7 @@ class CabinetControllerIntegrationTest {
     @Autowired private MockMvc           mockMvc;
     @Autowired private UserRepository    userRepository;
     @Autowired private CabinetRepository cabinetRepository;
+    @Autowired private PostRepository    postRepository;
     @Autowired private PasswordEncoder   passwordEncoder;
     @Autowired private JwtTokenProvider  jwtTokenProvider;
     @Autowired private ObjectMapper      objectMapper;
@@ -68,7 +70,8 @@ class CabinetControllerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        // Independent: wipe state before each test.
+        // Independent: wipe state before each test. Order: posts → users → cabinets (FK cascade)
+        postRepository.deleteAll();
         userRepository.deleteAll();
         cabinetRepository.deleteAll();
 

@@ -52,14 +52,6 @@ public class TenantContextFilter extends OncePerRequestFilter {
             FilterChain         filterChain) throws ServletException, IOException {
 
         try {
-            String cabinetHeader = request.getHeader(CABINET_CONTEXT_HEADER);
-
-            // No header present — this endpoint doesn't require cabinet scope.
-            if (cabinetHeader == null || cabinetHeader.isBlank()) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
             // Only enforce tenant isolation for authenticated requests.
             if (SecurityContextHolder.getContext().getAuthentication() == null
                     || !SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
@@ -67,22 +59,44 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // Retrieve the JWT claims previously stored by JwtAuthFilter (no re-parse).
+            // Retrieve the JWT claims previously stored by JwtAuthFilter
             Claims claims = (Claims) request.getAttribute(JwtTokenProvider.CLAIMS_ATTRIBUTE);
             if (claims == null) {
-                log.warn("TenantContextFilter: JWT claims attribute missing from request");
-                sendForbidden(response, "Invalid security context");
+                // If there are no claims, this might be an endpoint that doesn't need auth,
+                // or auth failed previously. Just pass it through.
+                filterChain.doFilter(request, response);
                 return;
             }
 
-            // Validate UUID format first (OWASP A03 – input validation at boundary).
-            UUID requestedCabinetId;
-            try {
-                requestedCabinetId = UUID.fromString(cabinetHeader.trim());
-            } catch (IllegalArgumentException ex) {
-                log.warn("TenantContextFilter: Invalid UUID format in X-Cabinet-Context header: '{}'",
-                        cabinetHeader);
-                sendForbidden(response, "Invalid cabinet context value");
+            String cabinetHeader = request.getHeader(CABINET_CONTEXT_HEADER);
+            UUID requestedCabinetId = null;
+
+            if (cabinetHeader != null && !cabinetHeader.isBlank()) {
+                // Validate UUID format first (OWASP A03 – input validation at boundary).
+                try {
+                    requestedCabinetId = UUID.fromString(cabinetHeader.trim());
+                } catch (IllegalArgumentException ex) {
+                    log.warn("TenantContextFilter: Invalid UUID format in X-Cabinet-Context header: '{}'",
+                            cabinetHeader);
+                    sendForbidden(response, "Invalid cabinet context value");
+                    return;
+                }
+            } else {
+                // FALLBACK: Read from JWT claim if header is missing
+                String activeContextFromJwt = claims.get(JwtTokenProvider.CLAIM_ACTIVE_CABINET, String.class);
+                if (activeContextFromJwt != null && !activeContextFromJwt.isBlank()) {
+                    try {
+                        requestedCabinetId = UUID.fromString(activeContextFromJwt);
+                    } catch (IllegalArgumentException ex) {
+                        // Ignore malformed claim
+                    }
+                }
+            }
+
+            // No active tenant context resolved — allow proceeding (e.g. for /auth endpoints).
+            // Controllers needing roles will block inherently since they won't have the role injected.
+            if (requestedCabinetId == null) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
@@ -90,6 +104,19 @@ public class TenantContextFilter extends OncePerRequestFilter {
             @SuppressWarnings("unchecked")
             Map<String, String> rolesMap =
                     (Map<String, String>) claims.get(JwtTokenProvider.CLAIM_ROLES);
+
+            // ── SUPER ADMIN BYPASS ────────────────────────────────────────────
+            // Super Admins can read any cabinet (platform-level oversight).
+            // Write access is blocked at the Controller layer via @PreAuthorize.
+            // This prevents the need to manually assign the admin to every cabinet.
+            Boolean isAdmin = claims.get(JwtTokenProvider.CLAIM_IS_ADMIN, Boolean.class);
+            if (Boolean.TRUE.equals(isAdmin)) {
+                TenantContext.setCabinetId(requestedCabinetId);
+                log.debug("TenantContextFilter: Super Admin '{}' granted read-only access to cabinet '{}'",
+                        claims.getSubject(), requestedCabinetId);
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             // ── THE CRITICAL GUARD ────────────────────────────────────────────
             // If the requested cabinet is NOT in the user's roles map, block it.

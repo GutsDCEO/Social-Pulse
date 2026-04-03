@@ -1,15 +1,22 @@
 package com.guts.socialpulse.controller;
 
+import com.guts.socialpulse.dto.AssignUserRequest;
 import com.guts.socialpulse.dto.CabinetDTO;
 import com.guts.socialpulse.dto.CreateCabinetRequest;
 import com.guts.socialpulse.security.SimulationReadOnly;
 import com.guts.socialpulse.service.CabinetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 /**
  * REST controller for cabinet (law firm) management.
@@ -28,6 +35,40 @@ import org.springframework.web.bind.annotation.*;
 public class CabinetController {
 
     private final CabinetService cabinetService;
+
+    /**
+     * Lists cabinets visible to the authenticated user.
+     * - Super Admin: all cabinets
+     * - Non-admin: only cabinets assigned to this user
+     */
+    @GetMapping
+    public ResponseEntity<List<CabinetDTO>> getCabinets(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        String username = authentication.getName();
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid authentication principal");
+        }
+        try {
+            boolean isSuperAdmin = authentication.getAuthorities() != null
+                    && authentication.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+            return ResponseEntity.ok(cabinetService.getCabinetsForUser(username, isSuperAdmin));
+        } catch (UsernameNotFoundException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage(), ex);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to retrieve cabinets",
+                    ex
+            );
+        }
+    }
 
     /**
      * Create a new cabinet (law firm).
@@ -62,5 +103,51 @@ public class CabinetController {
     @GetMapping("/me")
     public ResponseEntity<CabinetDTO> getMyCabinet() {
         return ResponseEntity.ok(cabinetService.getMyCabinet());
+    }
+
+    /**
+     * Retrieve a specific cabinet by ID.
+     * Accessible by SUPER_ADMIN or members assigned to this cabinet.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<CabinetDTO> getCabinetById(@PathVariable java.util.UUID id) {
+        return ResponseEntity.ok(cabinetService.getCabinetById(id));
+    }
+
+    /**
+     * Update an existing cabinet.
+     * Restricted to Super Admins.
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<CabinetDTO> updateCabinet(
+            @PathVariable java.util.UUID id,
+            @Valid @RequestBody com.guts.socialpulse.dto.UpdateCabinetRequest request) {
+        return ResponseEntity.ok(cabinetService.updateCabinet(id, request));
+    }
+
+    /**
+     * Assigns a CM or Avocat to a cabinet.
+     *
+     * Strategy (GDPR / OWASP A01): two-layer defence.
+     *   Layer 1 — this endpoint is Admin-only.
+     *   Layer 2 — CabinetServiceImpl blocks the ADMIN role enum value.
+     *
+     * X-Refreshed-Token: returned so the frontend can silently update the
+     * assigned user's stored JWT — no re-login required.
+     */
+    @PostMapping("/{cabinetId}/assign")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Void> assignUser(
+            @PathVariable java.util.UUID cabinetId,
+            @Valid @RequestBody AssignUserRequest request) {
+
+        String refreshedToken = cabinetService.assignUserToCabinet(
+                cabinetId, request.getUserId(), request.getRole());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "X-Refreshed-Token")
+                .header("X-Refreshed-Token", refreshedToken)
+                .build();
     }
 }
